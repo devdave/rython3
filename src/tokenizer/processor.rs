@@ -331,7 +331,7 @@ impl Processor {
 
             else {
                 let chr = line.get().unwrap();
-                println!("Did not capture: {:?}", chr);
+                println!("Did not capture: {:?} - #{}", chr, lineno);
             }
         }
 
