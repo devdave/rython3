@@ -181,6 +181,9 @@ impl Processor {
         let mut engine = Processor::initialize();
         let mut body: Vec<Token> = Vec::new();
 
+        // For now, ALWAYS assume UTF-8 encoding for files.
+        body.push(Token::Make(TType::Encoding, 1, 0, 0, "utf-8"));
+
         for (lineno, line) in lines.into_iter().enumerate() {
             let line_vec = engine.consume_line(lineno+1, &line);
             if let Ok(mut product) = line_vec {
