@@ -223,7 +223,7 @@ impl Processor {
                 }
             }
 
-            product.push(Token::Make(TType::NL, lineno, 0, 0,"\n"));
+            product.push(Token::Make(TType::NL, lineno, 0, 1,"\n"));
 
             return Ok(product);
         }
@@ -337,9 +337,9 @@ impl Processor {
 
 
         if has_statenent == true && self.continues == false {
-            product.push(Token::Make(TType::Newline, lineno, line.get_idx(), line.get_idx(), "\n"));
+            product.push(Token::Make(TType::Newline, lineno, line.get_idx(), line.get_idx()+1, "\n"));
         } else {
-            product.push(Token::Make(TType::NL, lineno, line.get_idx(), line.get_idx(), "\n"));
+            product.push(Token::Make(TType::NL, lineno, line.get_idx(), line.get_idx()+1, "\n"));
         }
 
 
