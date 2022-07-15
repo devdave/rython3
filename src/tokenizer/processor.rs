@@ -241,7 +241,7 @@ impl Processor {
                         return Err(TokError::TooDeep);
                     }
                     self.indent_stack.push(current_size);
-                    product.push(Token::Make(TType::Indent, lineno, 0, current_size, ""));
+                    product.push(Token::Make(TType::Indent, lineno, 0, current_size, whitespace.as_str()));
                 },
                 Ordering::Less => {
                     //We are handling 1 or more dedents
