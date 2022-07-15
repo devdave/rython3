@@ -28,12 +28,24 @@ fn main() {
         let lines = read_lines(args.nth(1).unwrap());
         let result = Processor::Consume_lines(lines);
         if let Ok(retval) = result {
-            println!("Main got {:?}", retval);
+            for element in retval.iter() {
+
+                let token_range = format!("{},{}-{},{}:", element.lineno, element.col_start, element.line_end, element.col_end);
+
+                println!("{:20}  {:15?} {:15?}",
+                         token_range,
+                         element.r#type,
+                         element.text);
+
+            }
         } else if let Err(retval) = result {
             println!("Main got a token error: {:?}", retval);
         }
     } else {
         println!("I got {} - {:?}", args.len(), args);
+
+
+
     }
 
 }

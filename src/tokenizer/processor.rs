@@ -196,16 +196,7 @@ impl Processor {
         }
 
 
-        for element in body.iter() {
-            println!("{},{} - {}, {}:      {:?}    {:?}",
-                     element.lineno,
-                     element.col_start,
-                     element.line_end,
-                     element.col_end,
-                     element.r#type,
-                     element.text);
-            // println!("token: {:?}", element);
-        }
+
 
 
 
