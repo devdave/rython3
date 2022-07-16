@@ -25,8 +25,9 @@ fn main() {
     let mut args = env::args();
     if args.len() == 2 {
         println!("runtime.exe file_to_tokenize.py");
-        let lines = read_lines(args.nth(1).unwrap());
-        let result = Processor::Consume_lines(lines);
+        // let lines = read_lines(args.nth(1).unwrap());
+        let result = Processor::Consume_file(args.nth(1).expect("Expected a file name as argument"));
+        // let result = Processor::Consume_lines(lines);
         if let Ok(retval) = result {
             for element in retval.iter() {
 
