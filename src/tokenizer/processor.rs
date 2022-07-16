@@ -8,11 +8,13 @@ use super::{
     ttype::TType,
     operators::OPERATOR_RE,
     managed_line::ManagedLine,
+    module_lines::ModuleLines,
 };
 
 use once_cell::sync::Lazy;
 use regex::{Error, Regex};
 use std::io::{Read};
+use itertools::iproduct;
 // use std::str::Chars;
 
 //Copied from LIBCST
@@ -53,7 +55,7 @@ static NLSYM: &str = "\r\n";
 
 ///Lowest tier tokenizer, handles tokenizing line
 ///
-pub struct Processor {
+pub struct Processor<'t> {
 
     /**
         number of elements is how far indented the code is
@@ -75,21 +77,25 @@ pub struct Processor {
     Was the last line an open string or ( or something along those lines?
     */
     continues: bool,
-
+    /**
+    Not used, to be cut
+    */
     line_blank: bool,
+    module: ModuleLines<'t>,
 
 }
 
 
 #[allow(non_snake_case)]
-impl Processor {
-    fn initialize() -> Self {
+impl <'t> Processor <'t> {
+    fn initialize(lines: Vec<String>) -> Self {
         Self {
             indent_stack: Vec::new(),
             paren_stack: Vec::new(),
             last_line_was_blank: false,
             continues: false,
             line_blank: false,
+            module: ModuleLines::Make(lines, "__main__".to_string()),
         }
     }
 
@@ -105,69 +111,81 @@ impl Processor {
     }
 
     pub fn Consume_lines(lines: Vec<String>) -> Result<Vec<Token>, TokError<'static>> {
-        let mut engine = Processor::initialize();
+
+        let mut engine = Processor::initialize(lines);
         let mut body: Vec<Token> = Vec::new();
 
         // For now, ALWAYS assume UTF-8 encoding for files.
         body.push(Token::Make(TType::Encoding, 1, 0, 0, "utf-8"));
 
+        while engine.module.has_lines() {
 
-        //Bleh - TODO fix this tomorrow
-        for (lineno, line) in lines.into_iter().enumerate() {
-            let line_vec = &engine.consume_line(lineno+1, &line);
-            if let Ok(mut product) = line_vec {
-                body.append(&mut product);
-            } else if let Err(issue) = line_vec {
-                return Err(*issue);
+            let mut line = engine.module.get().expect("Expected a line in module");
+            let outcome = engine.consume_line(line);
+
+            match outcome {
+                Ok(mut product) => {
+                    // So.... yeah, not ideal but I needed a way to duplicate/copy all the elements
+                    // of product so I can append them to body.
+                    // TODO - Refactor so this is less stupid.
+                    body.append(&mut product);
+
+                },
+                Err(issue) => {
+                    return Err(issue);
+                }
             }
-        }
+
+
+
+        } // End While
 
         if engine.paren_stack.len() > 0 {
             let (hopefully_last, lineno) = engine.paren_stack.pop().unwrap();
             return Err(TokError::UnmatchedClosingParen(hopefully_last));
         }
 
-
-
-
+        if body.last().unwrap().r#type != TType::EndMarker {
+            body.push(Token::Make(TType::EndMarker, engine.module.len()-1, 0, 0, ""));
+        }
 
 
         return Ok(body);
     }
 
-    fn consume_line(&mut self, lineno: usize, line: &str) -> Result<Vec<Token>, TokError> {
+    fn consume_line(&mut self, line: &mut ManagedLine) -> Result<Vec<Token>, TokError> {
 
         let mut product: Vec<Token> = Vec::new();
-        let raw: &str = &format!("{}", line);
+
 
         if self.continues == true {
             //Switch off the current continuation flag
             self.continues = false;
             // and let the continuation handler decide if it is going to continue.
-            return self.handle_continuation(lineno, line);
+            return self.handle_continuation(line);
 
         }
 
 
         //Deal with empty lines first
-        if raw.len() == 0 || raw == "" {
+        if line.text.len() == 0 || line.text == "" {
             // Assume ALL NL and Newlines are \n and not \r or \r\n - *nix or gtfo.
 
 
             if self.indent_stack.len() > 0 {
                 while self.indent_stack.len() > 0 {
                     self.indent_stack.pop();
-                    product.push(Token::Make(TType::Dedent, lineno, 0, 0, raw));
+                    product.push(Token::Make(TType::Dedent, line.lineno, 0, 0, line.text));
                 }
             }
 
-            product.push(Token::Make(TType::NL, lineno, 0, 1,"\n"));
+            product.push(Token::Make(TType::NL, line.lineno, 0, 1,"\n"));
 
             return Ok(product);
         }
 
         //Consume the beginning of the line and handle indentations and dedentations
-        let ws_match = SPACE_TAB_FORMFEED_RE.find(&raw);
+        let ws_match = SPACE_TAB_FORMFEED_RE.find(&line.text);
         if let Some(whitespace) = ws_match {
             let current_size = whitespace.end() - whitespace.start();
             let last_size = self.indent_stack.last().unwrap_or(&0);
@@ -179,13 +197,13 @@ impl Processor {
                         return Err(TokError::TooDeep);
                     }
                     self.indent_stack.push(current_size);
-                    product.push(Token::Make(TType::Indent, lineno, 0, current_size, whitespace.as_str()));
+                    product.push(Token::Make(TType::Indent, line.lineno, 0, current_size, whitespace.as_str()));
                 },
                 Ordering::Less => {
                     //We are handling 1 or more dedents
                     while self.indent_stack.len() > 0 {
                         let last_indent_size = self.indent_stack.pop().unwrap();
-                        product.push(Token::Make(TType::Dedent, lineno, 0, current_size, ""));
+                        product.push(Token::Make(TType::Dedent, line.lineno, 0, current_size, ""));
                         if last_indent_size == current_size {
                             break;
                         }
@@ -202,11 +220,9 @@ impl Processor {
             //Handle edge case where dedent has gone all the way to zero
             while self.indent_stack.len() > 0 {
                 self.indent_stack.pop();
-                product.push(Token::Make(TType::Dedent, lineno, 0, 0, ""));
+                product.push(Token::Make(TType::Dedent, line.lineno, 0, 0, ""));
             }
         }
-
-        let mut line = ManagedLine::Make(raw.to_string());
 
         //Skip whitespace
         let mut _ignore_me = line.test_and_return(&SPACE_TAB_FORMFEED_RE.to_owned());
@@ -217,7 +233,7 @@ impl Processor {
 
             //Look for a comment and consume all after it.
             if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\#.*").expect("regex")) {
-                product.push(Token::Make(TType::Comment, lineno, current_idx - &retval.len(), current_idx, &retval));
+                product.push(Token::Make(TType::Comment, line.lineno, current_idx - &retval.len(), current_idx, &retval));
             }
             // Look for a operator
             else if let Some((current_idx, retval)) = line.test_and_return(&OPERATOR_RE.to_owned()) {
@@ -225,7 +241,7 @@ impl Processor {
                 let char_retval = retval.chars().nth(0).unwrap();
 
                 if retval.len() == 1 && retval.contains(&['[','(']) {
-                    self.paren_stack.push( (char_retval, lineno) );
+                    self.paren_stack.push( (char_retval, line.lineno) );
                 } else if retval.contains(&[']',')']) {
                     let last_paren = self.paren_stack.last();
                     match last_paren {
@@ -244,20 +260,20 @@ impl Processor {
                     }
                 }
 
-                product.push(Token::Make(TType::Op, lineno, current_idx - &retval.len(), current_idx, &retval));
+                product.push(Token::Make(TType::Op, line.lineno, current_idx - &retval.len(), current_idx, &retval));
                 has_statenent = true;
 
 
             }
             // like Regex says, look for non-quoted strings
             else if let Some((current_idx, strreturn)) = line.test_and_return(&POSSIBLE_NAME.to_owned()) {
-                product.push(Token::Make(TType::Name, lineno, current_idx - strreturn.len(), current_idx, &strreturn));
+                product.push(Token::Make(TType::Name, line.lineno, current_idx - strreturn.len(), current_idx, &strreturn));
                 has_statenent = true;
 
             }
             // look for numbers
             else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A[0-9\.]+").expect("regex")) {
-                product.push(Token::Make(TType::Number, lineno, current_idx - retval.len(), current_idx, &retval));
+                product.push(Token::Make(TType::Number, line.lineno, current_idx - retval.len(), current_idx, &retval));
                 has_statenent = true;
             }
             else if let Some((_current_idx, _retval )) = line.test_and_return(&SPACE_TAB_FORMFEED_RE.to_owned()) {
@@ -269,15 +285,15 @@ impl Processor {
 
             else {
                 let chr = line.get().unwrap();
-                println!("Did not capture: {:?} - #{}", chr, lineno);
+                println!("Did not capture: {:?} - #{}", chr, line.lineno);
             }
         }
 
 
         if has_statenent == true && self.continues == false {
-            product.push(Token::Make(TType::Newline, lineno, line.get_idx(), line.get_idx()+1, "\n"));
+            product.push(Token::Make(TType::Newline, line.lineno, line.get_idx(), line.get_idx()+1, "\n"));
         } else {
-            product.push(Token::Make(TType::NL, lineno, line.get_idx(), line.get_idx()+1, "\n"));
+            product.push(Token::Make(TType::NL, line.lineno, line.get_idx(), line.get_idx()+1, "\n"));
         }
 
 
@@ -286,7 +302,7 @@ impl Processor {
     }
 
 
-    fn handle_continuation(&mut self, lineno: usize, line: &str) -> Result<Vec<Token>, TokError> {
+    fn handle_continuation(&mut self, line: &ManagedLine) -> Result<Vec<Token>, TokError> {
 
         Err(TokError::BadIdentifier("Not implemented"))
     }
@@ -304,7 +320,7 @@ mod tests {
 
     #[test]
     fn processor_works() {
-        Processor::initialize();
+        Processor::initialize(vec!["Hello".to_string(), "World".to_string()]);
     }
 
     #[test]
@@ -335,21 +351,22 @@ mod tests {
     #[test]
     fn processor_consume_lines_handles_names() {
 
-        let mut processor = Processor::initialize();
-        let tokens = processor.consume_line(1, "    def hello_world():");
+        let mut processor = Processor::initialize(vec!["    def hello_world():".to_string()]);
+
+        let tokens = processor.consume_line(processor.module.get().unwrap());
 
         println!("I got {:?}", tokens);
     }
 
     #[test]
     fn managed_line_works() {
-        let mut line = ManagedLine::Make("abc".to_string());
+        let mut line = ManagedLine::Make(1,&"abc".to_string());
         assert_eq!(line.peek().unwrap(), 'a');
     }
 
     #[test]
     fn managed_line_gets_to_end() {
-        let mut line = ManagedLine::Make("abc".to_string());
+        let mut line = ManagedLine::Make(1,&"abc".to_string());
         assert_eq!(line.get().unwrap(), 'a');
         assert_eq!(line.get().unwrap(), 'b');
         assert_eq!(line.get().unwrap(), 'c');
@@ -358,7 +375,7 @@ mod tests {
 
     #[test]
     fn managed_line_goes_back() {
-        let mut line = ManagedLine::Make("abc".to_string());
+        let mut line = ManagedLine::Make(1,&"abc".to_string());
         assert_eq!(line.get().unwrap(), 'a');
         assert_eq!(line.get().unwrap(), 'b');
         assert_eq!(line.get().unwrap(), 'c');
@@ -373,7 +390,7 @@ mod tests {
     #[test]
     fn managed_line_swallows_operators() {
 
-        let mut sane = ManagedLine::Make("()[]".to_string());
+        let mut sane = ManagedLine::Make(1,&"()[]".to_string());
         //Somewhat problematic here is the regex is still Lazy<Regex> at this point
         // so for now primestart it
         let (_current_idx, retval1) = sane.test_and_return(&OPERATOR_RE.to_owned()).unwrap();
