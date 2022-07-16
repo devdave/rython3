@@ -1,16 +1,19 @@
 use regex::Regex;
 
-pub struct ManagedLine {
+#[derive(Debug)]
+pub struct ManagedLine<'t> {
+    pub lineno: usize,
     pub idx: usize,
-    text: String,
+    pub text: &'t String,
     content: Vec<char>,
 }
 
 #[allow(non_snake_case)]
-impl ManagedLine {
+impl <'t> ManagedLine<'t> {
 
-    pub fn Make(input: String) -> Self {
+    pub fn Make(lineno: usize, input: &'t String) -> Self {
         Self {
+            lineno: lineno,
             idx: 0,
             text: input,
             content: input.chars().collect(),
