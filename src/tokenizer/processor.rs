@@ -77,82 +77,12 @@ pub struct Processor {
 
     line_blank: bool,
 
-    /**
-     For strings they can be on multiple lines so this allows to hold the last token
-
-    */
-    continue_token: Token,
 }
 
-struct ManagedLine<'t> {
-    pub idx: usize,
-    text: &'t str,
-    content: Vec<char>,
-}
 
-#[allow(non_snake_case)]
-impl<'t> ManagedLine<'t> {
 
-    fn Make(input: &'t str) -> Self {
-        Self {
-            idx: 0,
-            text: input,
-            content: input.chars().collect(),
-        }
-    }
 
-    pub fn get_idx(&mut self) -> usize {
-        self.idx
-    }
 
-    pub fn get(&mut self) -> Option<char> {
-
-        if self.content.len() > self.idx {
-            let retval = self.content[self.idx] as char;
-            // let retval = self.content.get(self.idx).unwrap() as char;
-            self.idx += 1;
-            Some(retval)
-        } else {
-            None
-        }
-    }
-
-    pub fn backup(&mut self) {
-        self.idx -= 1;
-    }
-
-    pub fn peek(&mut self) -> Option<char> {
-        if self.content.len() > self.idx {
-            Some(self.content[self.idx] as char)
-        } else {
-            None
-        }
-    }
-
-    pub fn get_pos(&self) -> usize {
-        return self.idx;
-    }
-
-    pub fn len(&self) -> usize {
-        return self.content.len();
-    }
-
-    pub fn remaining(&self) -> usize {
-        self.len() - self.get_pos()
-    }
-
-    pub fn test_and_return(&mut self, pattern: &Regex) -> Option<(usize, &str)> {
-
-        let remaining = &self.text[self.idx..];
-        let test = pattern.find(remaining);
-        if let Some(found) = test {
-            let len = found.end() - found.start();
-            self.idx += found.start() + len;
-            return Some((self.idx, found.as_str()));
-        }
-        None
-    }
-}
 
 #[allow(non_snake_case)]
 impl Processor {
@@ -278,7 +208,7 @@ impl Processor {
             }
         }
 
-        let mut line = ManagedLine::Make(raw);
+        let mut line = ManagedLine::Make(raw.to_string());
 
         //Skip whitespace
         let mut _ignore_me = line.test_and_return(&SPACE_TAB_FORMFEED_RE.to_owned());
@@ -360,6 +290,7 @@ impl Processor {
 
     fn handle_continuation(&mut self, lineno: usize, line: &str) -> Result<Vec<Token>, TokError> {
 
+        Err(TokError::BadIdentifier("Not implemented"))
     }
 }
 
@@ -414,13 +345,13 @@ mod tests {
 
     #[test]
     fn managed_line_works() {
-        let mut line = ManagedLine::Make("abc");
+        let mut line = ManagedLine::Make("abc".to_string());
         assert_eq!(line.peek().unwrap(), 'a');
     }
 
     #[test]
     fn managed_line_gets_to_end() {
-        let mut line = ManagedLine::Make("abc");
+        let mut line = ManagedLine::Make("abc".to_string());
         assert_eq!(line.get().unwrap(), 'a');
         assert_eq!(line.get().unwrap(), 'b');
         assert_eq!(line.get().unwrap(), 'c');
@@ -429,7 +360,7 @@ mod tests {
 
     #[test]
     fn managed_line_goes_back() {
-        let mut line = ManagedLine::Make("abc");
+        let mut line = ManagedLine::Make("abc".to_string());
         assert_eq!(line.get().unwrap(), 'a');
         assert_eq!(line.get().unwrap(), 'b');
         assert_eq!(line.get().unwrap(), 'c');
@@ -444,7 +375,7 @@ mod tests {
     #[test]
     fn managed_line_swallows_operators() {
 
-        let mut sane = ManagedLine::Make("()[]");
+        let mut sane = ManagedLine::Make("()[]".to_string());
         //Somewhat problematic here is the regex is still Lazy<Regex> at this point
         // so for now primestart it
         let (_current_idx, retval1) = sane.test_and_return(&OPERATOR_RE.to_owned()).unwrap();
