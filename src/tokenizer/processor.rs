@@ -76,9 +76,12 @@ pub struct Processor {
     continues: bool,
 
     line_blank: bool,
-}
 
+    /**
+     For strings they can be on multiple lines so this allows to hold the last token
 
+    */
+    continue_token: Token,
 }
 
 struct ManagedLine<'t> {
@@ -160,6 +163,7 @@ impl Processor {
             last_line_was_blank: false,
             continues: false,
             line_blank: false,
+            continue_token: None,
         }
     }
 
