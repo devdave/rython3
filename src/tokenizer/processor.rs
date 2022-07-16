@@ -1,4 +1,4 @@
-
+use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::fmt::format;
 use std::fs::File;
@@ -7,10 +7,11 @@ use super::{
     error::TokError,
     ttype::TType,
     operators::OPERATOR_RE,
+    managed_line::ManagedLine,
 };
 
 use once_cell::sync::Lazy;
-use regex::Regex;
+use regex::{Error, Regex};
 use std::io::{Read};
 // use std::str::Chars;
 
@@ -80,10 +81,6 @@ pub struct Processor {
 }
 
 
-
-
-
-
 #[allow(non_snake_case)]
 impl Processor {
     fn initialize() -> Self {
@@ -93,7 +90,6 @@ impl Processor {
             last_line_was_blank: false,
             continues: false,
             line_blank: false,
-            continue_token: None,
         }
     }
 
@@ -115,12 +111,14 @@ impl Processor {
         // For now, ALWAYS assume UTF-8 encoding for files.
         body.push(Token::Make(TType::Encoding, 1, 0, 0, "utf-8"));
 
+
+        //Bleh - TODO fix this tomorrow
         for (lineno, line) in lines.into_iter().enumerate() {
-            let line_vec = engine.consume_line(lineno+1, &line);
+            let line_vec = &engine.consume_line(lineno+1, &line);
             if let Ok(mut product) = line_vec {
                 body.append(&mut product);
             } else if let Err(issue) = line_vec {
-                return Err(issue);
+                return Err(*issue);
             }
         }
 
