@@ -1,6 +1,6 @@
 use thiserror;
 
-#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, thiserror::Error, Eq, PartialEq)]
 pub enum TokError<'t> {
     #[error("inconsistent mixing of tabs and spaces")]
     TabSpace,
