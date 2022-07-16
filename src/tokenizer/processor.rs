@@ -208,6 +208,15 @@ impl Processor {
         let mut product: Vec<Token> = Vec::new();
         let raw: &str = &format!("{}", line);
 
+        if self.continues == true {
+            //Switch off the current continuation flag
+            self.continues = false;
+            // and let the continuation handler decide if it is going to continue.
+            return self.handle_continuation(lineno, line);
+
+        }
+
+
         //Deal with empty lines first
         if raw.len() == 0 || raw == "" {
             // Assume ALL NL and Newlines are \n and not \r or \r\n - *nix or gtfo.
@@ -344,6 +353,10 @@ impl Processor {
 
     }
 
+
+    fn handle_continuation(&mut self, lineno: usize, line: &str) -> Result<Vec<Token>, TokError> {
+
+    }
 }
 
 
