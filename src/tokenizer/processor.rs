@@ -78,10 +78,6 @@ pub struct Processor {
     line_blank: bool,
 }
 
-struct LineErr {
-    lineno: usize,
-    colpos: usize,
-    detail: String,
 
 }
 
