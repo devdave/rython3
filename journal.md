@@ -72,4 +72,13 @@ Step 2 is to check the current indent in stack.
 
 # Processor - managed line helper struct
 
-I decided to manage lines
+I decided to manage lines- never finished this sentence.
+
+# Processor - handling continuations
+
+I am thinking a struct Module which has three things: name, a vec of str, and a usize index.
+
+consume_lines loop would be refactored from a for iteration to a while `module.peek() != None`.
+
+Module will be a property/value of Processor.
+
