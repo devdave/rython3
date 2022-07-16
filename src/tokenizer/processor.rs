@@ -190,7 +190,7 @@ impl Processor {
             if let Ok(mut product) = line_vec {
                 body.append(&mut product);
             } else if let Err(issue) = line_vec {
-                panic!("Got an error token from consume line {:?}", issue);
+                return Err(issue);
             }
         }
 
