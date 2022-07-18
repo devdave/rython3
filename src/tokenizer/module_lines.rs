@@ -2,17 +2,17 @@ use std::process::id;
 use super::managed_line::ManagedLine;
 
 #[derive(Debug)]
-pub struct ModuleLines<'t> {
+pub struct ModuleLines {
     idx: usize,
     name: String,
-    content: Vec<ManagedLine<'t>>,
+    content: Vec<ManagedLine>,
 }
 
-impl <'t> ModuleLines<'t> {
+impl ModuleLines {
 
     pub fn Make(lines: Vec<String>, name: String) -> Self {
 
-        let managed: Vec<ManagedLine> = lines.iter().enumerate().map(|(lineno, content)| ManagedLine::Make(lineno,content)).collect();
+        let managed: Vec<ManagedLine> = lines.iter().enumerate().map(|(lineno, content)| ManagedLine::Make(lineno,content.to_string())).collect();
         Self {
             idx: 0,
             name: name,
@@ -21,10 +21,10 @@ impl <'t> ModuleLines<'t> {
     }
 
     pub fn has_lines(&self) -> bool {
-        self.idx <self.content.len()
+        self.idx < self.content.len()
     }
 
-    pub fn peek(&mut self) -> Option<&ManagedLine> {
+    pub fn peek(&self) -> Option<&ManagedLine> {
         if self.idx < self.content.len() {
             self.content.get(self.idx)
         } else {
@@ -33,11 +33,12 @@ impl <'t> ModuleLines<'t> {
 
     }
 
-    pub fn get(&mut self) -> Option<&mut ManagedLine<'t>> {
+    pub fn get(&mut self) -> Option<ManagedLine> {
         if self.idx < self.content.len() {
-            let retval = self.content.get_mut(self.idx).unwrap();
+            let retval = self.content.get(self.idx).unwrap();
+            let duplicate = ManagedLine::Make(retval.lineno, retval.text.to_string());
             self.idx += 1;
-            return Some(retval);
+            return Some(duplicate);
         } else {
             return None;
         }

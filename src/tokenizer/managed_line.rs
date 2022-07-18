@@ -1,23 +1,26 @@
 use regex::Regex;
 
-#[derive(Debug)]
-pub struct ManagedLine<'t> {
+#[derive(Debug, Clone)]
+pub struct ManagedLine {
     pub lineno: usize,
     pub idx: usize,
-    pub text: &'t String,
+    pub text: String,
     content: Vec<char>,
 }
 
 #[allow(non_snake_case)]
-impl <'t> ManagedLine<'t> {
+impl ManagedLine {
 
-    pub fn Make(lineno: usize, input: &'t String) -> Self {
-        Self {
+    pub fn Make(lineno: usize, input: String) -> Self {
+        let mut hack = Self {
             lineno: lineno,
             idx: 0,
             text: input,
-            content: input.chars().collect(),
-        }
+            content: vec!['b'],
+        };
+        hack.content = hack.text[..].to_string().chars().collect();
+
+        return hack;
     }
 
     pub fn get_idx(&mut self) -> usize {
