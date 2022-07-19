@@ -1,6 +1,7 @@
-use std::borrow::Borrow;
+
 use std::cmp::Ordering;
-use std::fmt::format;
+
+
 use std::fs::File;
 use super::{
     token::Token,
@@ -12,9 +13,10 @@ use super::{
 };
 
 use once_cell::sync::Lazy;
-use regex::{Error, Regex};
+use regex::{Regex};
 use std::io::{Read};
-use itertools::iproduct;
+use crate::tokenizer::error::TokError::UnterminatedTripleQuotedString;
+
 // use std::str::Chars;
 
 //Copied from LIBCST
@@ -33,13 +35,13 @@ static STRING_PREFIX_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A(?i)(u|[bf]r|r[bf]|r|b|f)").expect("regex"));
 static POTENTIAL_IDENTIFIER_TAIL_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A([a-zA-Z0-9_]|[^\x00-\x7f])+").expect("regex"));
-static DECIMAL_DOT_DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A\.[0-9]").expect("regex"));
-static DECIMAL_TAIL_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\A[0-9](_?[0-9])*").expect("regex"));
-static HEXADECIMAL_TAIL_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\A(_?[0-9a-fA-F])+").expect("regex"));
-static OCTAL_TAIL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A(_?[0-7])+").expect("regex"));
-static BINARY_TAIL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A(_?[01])+").expect("regex"));
+// static DECIMAL_DOT_DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A\.[0-9]").expect("regex"));
+// static DECIMAL_TAIL_RE: Lazy<Regex> =
+//     Lazy::new(|| Regex::new(r"\A[0-9](_?[0-9])*").expect("regex"));
+// static HEXADECIMAL_TAIL_RE: Lazy<Regex> =
+//     Lazy::new(|| Regex::new(r"\A(_?[0-9a-fA-F])+").expect("regex"));
+// static OCTAL_TAIL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A(_?[0-7])+").expect("regex"));
+// static BINARY_TAIL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A(_?[01])+").expect("regex"));
 static POSSIBLE_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A[a-zA-Z]{1}[\w\d]+").expect("regex"));
 
 
@@ -76,7 +78,9 @@ pub struct Processor {
     /**
     Was the last line an open string or ( or something along those lines?
     */
-    continues: bool,
+    string_continues: bool,
+    string_continue_startline: usize,
+    string_continue_buffer: Vec<String>,
     /**
     Not used, to be cut
     */
@@ -88,18 +92,22 @@ pub struct Processor {
 
 #[allow(non_snake_case)]
 impl Processor {
-    fn initialize(lines: Vec<String>) -> Self {
+    pub fn initialize(lines: Vec<String>, module_name: Option<String>) -> Self {
+
+        let name = module_name.unwrap_or("__main__".to_string());
         Self {
             indent_stack: Vec::new(),
             paren_stack: Vec::new(),
             last_line_was_blank: false,
-            continues: false,
+            string_continues: false,
+            string_continue_startline: 0,
+            string_continue_buffer: Vec::new(),
             line_blank: false,
-            module: ModuleLines::Make(lines, "__main__".to_string()),
+            module: ModuleLines::Make(lines, name),
         }
     }
 
-    pub fn Consume_file<P>(fname: P) -> Result<Vec<Token>, TokError<'static>>
+    pub fn consume_file<P>(fname: P, module_name: Option<String>) -> Self
         where P: AsRef<std::path::Path>, {
 
         let mut buffer: String = String::new();
@@ -107,22 +115,41 @@ impl Processor {
 
         let lines = buffer.split(&NLSYM).map(|l| l.to_string()).collect();
 
-        return Processor::Consume_lines(lines);
+        return Processor::initialize(lines, module_name);
+
     }
 
-    pub fn Consume_lines(lines: Vec<String>) -> Result<Vec<Token>, TokError<'static>> {
+    pub fn consume_string(input: String, module_name: Option<String>) -> Self {
+        let lines = if input.contains("\r\n") {
+            input.split("\r\n").map(|l| l.to_string()).collect()
+        } else {
+            input.split("\n").map(|l| l.to_string()).collect()
+        };
 
-        let mut engine = Processor::initialize(lines);
+        println!("Processing string into Vector {:?}", lines);
+        return Processor::initialize(lines, module_name);
+
+    }
+
+    pub fn consume_vector(input: Vec<String>, module_name: Option<String>) -> Self {
+        return Processor::initialize(input, module_name);
+    }
+
+    pub fn run(&mut self) -> Result<Vec<Token>, TokError> {
+
         let mut body: Vec<Token> = Vec::new();
 
         // For now, ALWAYS assume UTF-8 encoding for files.
         body.push(Token::Make(TType::Encoding, 1, 0, 0, "utf-8"));
 
-        let error: TokError;
+        // let error: TokError;
 
-        while &engine.module.has_lines() == &true {
+        let module_size = self.module.len();
 
-            let outcome = engine.consume_line();
+        while self.module.has_lines() == true {
+
+
+            let outcome = self.consume_line();
 
             match outcome {
                 Ok(mut product) => {
@@ -135,7 +162,7 @@ impl Processor {
                 Err(issue) => {
                     panic!("Tokenizer failure: {:?}", issue);
                     // TODO figure out why the borrow checker freaks out on this line
-                    // return Err(*issue);
+                    // return Err(issue.clone());
                 }
             }
 
@@ -143,13 +170,21 @@ impl Processor {
 
         } // End While
 
-        if engine.paren_stack.len() > 0 {
-            let (hopefully_last, lineno) = engine.paren_stack.pop().unwrap();
+        if self.paren_stack.len() > 0 {
+            let (hopefully_last, _lineno) = self.paren_stack.pop().unwrap();
             return Err(TokError::UnmatchedClosingParen(hopefully_last));
         }
 
+        if self.indent_stack.len() > 0 {
+            while self.indent_stack.len() > 0 {
+                self.indent_stack.pop();
+                body.push(Token::Make(TType::Dedent, module_size-1, 0, 0, ""));
+
+            }
+        }
+
         if body.last().unwrap().r#type != TType::EndMarker {
-            body.push(Token::Make(TType::EndMarker, engine.module.len()-1, 0, 0, ""));
+            body.push(Token::Make(TType::EndMarker, self.module.len()-1, 0, 0, ""));
         }
 
 
@@ -163,16 +198,16 @@ impl Processor {
         let mut product: Vec<Token> = Vec::new();
 
         let lineno = line.lineno;
-        let ltext = line.text.to_string();
+        // let ltext = line.text.to_string();
 
 
-        if self.continues == true {
-            //Switch off the current continuation flag
-            self.continues = false;
-            // and let the continuation handler decide if it is going to continue.
-            return self.handle_continuation(line);
-
-        }
+        // if self.string_continues == true {
+        //     //Switch off the current continuation flag
+        //     self.string_continues = false;
+        //     // and let the continuation handler decide if it is going to continue.
+        //     return self.handle_string_continuation(line);
+        //
+        // }
 
 
         //Deal with empty lines first
@@ -287,18 +322,30 @@ impl Processor {
             else if let Some((_current_idx, _retval )) = line.test_and_return(&SPACE_TAB_FORMFEED_RE.to_owned()) {
                 // pass/ignore WS
             } else if Some('\\') == line.peek() {
-                self.continues = true;
+                self.string_continues = true;
                 let _ = line.get();
             }
+            else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r#"^"{3}.*"#).expect("regex")) {
 
+                println!("Found the start of a triple quoted string!");
+                if let Ok(closed_str) = self.handle_triple_quote(current_idx, retval.to_string()) {
+                    println!("I got the string {:?}", closed_str);
+                    product.push(Token::Make(TType::String, lineno, current_idx, closed_str.len()+current_idx, closed_str.as_str()));
+                } else {
+                    return Err(TokError::UnterminatedTripleQuotedString);
+                }
+
+
+            }
             else {
                 let chr = line.get().unwrap();
                 println!("Did not capture: {:?} - #{}", chr, lineno);
             }
+
         }
 
 
-        if has_statenent == true && self.continues == false {
+        if has_statenent == true && self.string_continues == false {
             product.push(Token::Make(TType::Newline, lineno, line.get_idx(), line.get_idx()+1, "\n"));
         } else {
             product.push(Token::Make(TType::NL, lineno, line.get_idx(), line.get_idx()+1, "\n"));
@@ -309,8 +356,68 @@ impl Processor {
 
     }
 
+    fn handle_triple_quote(&mut self, current_idx: usize, collected: String) -> Result<String, TokError> {
+        println!("Attempting to process {}-{:?}", current_idx, collected);
+        // is the collected line just the triple quotes?
+        let mut str_collected = "".to_string();
+        let mut working_line = collected;
+        let triple_quote = r#"""""#;
 
-    fn handle_continuation(&mut self, line: ManagedLine) -> Result<Vec<Token>, TokError> {
+        if working_line.trim().starts_with(triple_quote) {
+            println!("working_line starts with triple quote");
+
+            if working_line.trim().len() == 3 {
+                // Lets grab the next line and move on to search for triple quote
+                println!("Fetching next line");
+                if let Some(module_line) = self.module.get() {
+                    println!("Next line is {:?}", module_line);
+                    working_line = module_line.text;
+                    str_collected.push('\n');
+                } else {
+                    return Err(TokError::UnterminatedTripleQuotedString);
+                }
+            } else {
+
+                working_line = working_line[3..].to_string();
+                if working_line.trim().ends_with(triple_quote) {
+                    println!("I found a close to my triple string! {:?}", working_line);
+                    return Ok(working_line[..3].to_string());
+
+                } else {
+                    panic!("What do I have here? {:?}", working_line);
+                }
+            }
+
+        }
+
+        println!("Starting loop");
+        loop {
+            if working_line.trim().starts_with(triple_quote){
+                // We are done!
+                println!("loop - Working line starts with triple");
+                return Ok(str_collected);
+            }
+            else if working_line.trim().ends_with(triple_quote) {
+                str_collected = format!("{}{}", str_collected, working_line[..3].to_string());
+                return Ok(str_collected);
+            }else {
+                str_collected = format!("{}{}", str_collected, working_line);
+                if let Some(managed_line ) = self.module.get() {
+                    working_line = managed_line.text.to_string();
+                } else if str_collected.len() == 0 {
+                    return Err(UnterminatedTripleQuotedString);
+                } else {
+                    return Ok(str_collected);
+                }
+            }
+
+        }
+
+    }
+
+    ///Currently only focus on handling triple quote strings
+    fn handle_string_continuation(&mut self, _: ManagedLine) -> Result<Vec<Token>, TokError> {
+
 
         Err(TokError::BadIdentifier("Not implemented"))
     }
@@ -319,7 +426,6 @@ impl Processor {
 
 #[cfg(test)]
 mod tests {
-
     use crate::Processor;
     use crate::tokenizer::operators::OPERATOR_RE;
     use crate::tokenizer::processor::ManagedLine;
@@ -328,20 +434,21 @@ mod tests {
 
     #[test]
     fn processor_works() {
-        Processor::initialize(vec!["Hello".to_string(), "World".to_string()]);
+        Processor::consume_string("Hello\nWorld".to_string(), Some("__test__".to_string()));
+
     }
 
     #[test]
     fn processor_does_basic_dentation() {
 
-        let tokens = Processor::Consume_file("test_fixtures/basic_indent.py").expect("Expected vec<Tokens>");
+        let tokens = Processor::consume_file("test_fixtures/basic_indent.py", Some("__test__".to_string())).run().expect("Tokens");
         assert!(tokens.len() > 1);
     }
 
     #[test]
     fn processor_does_adv_dentation() {
 
-        let tokens = Processor::Consume_file("test_fixtures/crazy_dents.py").expect("Expected vec<Tokens>");
+        let tokens = Processor::consume_file("test_fixtures/crazy_dents.py", Some("__test__".to_string())).run().expect("Expected vec<Tokens>");
         let mut indents = 0;
         let mut dedents = 0;
         for token in tokens.iter() {
@@ -356,14 +463,43 @@ mod tests {
         assert_eq!(indents, dedents);
     }
 
+    // #[test]
+    // fn processor_consumes_triple_quote_strings() {
+    //     let tokens = Processor::Consume_file("test_fixtures/multiline_strings.py").expect("Expected vec<Tokens");
+    // }
+
     #[test]
-    fn processor_consume_lines_handles_names() {
+    fn processor_consumes_triple_strings_v2 () {
+        let data =
+r#"
+"""
+    This is a test!
+"""
+"#;
 
-        let mut processor = Processor::initialize(vec!["    def hello_world():".to_string()]);
+        let tokens = Processor::consume_string(data.to_string(), Some("__test__".to_string())).run().expect("tokens");
+        println!("Processor consumes triple strings v2 got {:?}", tokens);
 
-        let tokens = processor.consume_line();
+        assert_eq!(tokens[2].r#type, TType::String);
+        assert_eq!(tokens[2].text, "\n    This is a test!\n");
 
-        println!("I got {:?}", tokens);
+
+    }
+
+
+
+    #[test]
+    fn processor_consume_handles_names() {
+
+        let mut processor = Processor::initialize(vec!["    def hello_world():".to_string()], Some("__test__".to_string()));
+
+        let retval = processor.consume_line();
+        let tokens = retval.unwrap();
+
+        println!("I got {}, {:?}", tokens.len(), tokens);
+        assert_eq!(7, tokens.len());
+        assert_eq!(tokens[0].r#type, TType::Indent);
+
     }
 
     #[test]
@@ -417,6 +553,8 @@ mod tests {
 
 
     }
+
+
 
 
 }
