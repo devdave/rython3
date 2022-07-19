@@ -70,7 +70,7 @@ impl ManagedLine {
         if let Some(found) = test {
             let len = found.end() - found.start();
             self.idx += found.start() + len;
-            return Some((self.idx, found.as_str()));
+            return Some((self.idx.clone(), found.as_str()));
         }
         None
     }
