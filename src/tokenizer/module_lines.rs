@@ -1,4 +1,4 @@
-use std::process::id;
+
 use super::managed_line::ManagedLine;
 
 #[derive(Debug)]
@@ -18,6 +18,12 @@ impl ModuleLines {
             name: name,
             content: managed,
         }
+    }
+
+    pub fn set_lines(&mut self, lines: Vec<String>, name: String) {
+        let managed: Vec<ManagedLine> = lines.iter().enumerate().map(|(lineno, content)| ManagedLine::Make(lineno,content.to_string())).collect();
+        self.name = name;
+        self.content = managed;
     }
 
     pub fn has_lines(&self) -> bool {
