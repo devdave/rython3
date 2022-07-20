@@ -1,7 +1,8 @@
 
+
 use super::managed_line::ManagedLine;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModuleLines {
     idx: usize,
     name: String,
@@ -18,6 +19,10 @@ impl ModuleLines {
             name: name,
             content: managed,
         }
+    }
+
+    pub fn get_lineno(&self) -> usize {
+        self.idx
     }
 
     pub fn set_lines(&mut self, lines: Vec<String>, name: String) {
@@ -55,5 +60,13 @@ impl ModuleLines {
         self.content.len()
     }
 
+
+}
+
+impl Iterator for ModuleLines {
+    type Item = ManagedLine;
+    fn next(&mut self) -> Option<Self::Item> {
+        return self.get();
+    }
 
 }
