@@ -215,16 +215,6 @@ impl Processor {
         let mut product: Vec<Token> = Vec::new();
 
         let lineno = line.lineno;
-        // let ltext = line.text.to_string();
-
-
-        // if self.string_continues == true {
-        //     //Switch off the current continuation flag
-        //     self.string_continues = false;
-        //     // and let the continuation handler decide if it is going to continue.
-        //     return self.handle_string_continuation(line);
-        //
-        // }
 
 
         //Deal with empty lines first
