@@ -3,6 +3,9 @@ use std::cmp::Ordering;
 
 
 use std::fs::File;
+
+use unicode_segmentation::UnicodeSegmentation;
+
 use super::{
     token::Token,
     error::TokError,
