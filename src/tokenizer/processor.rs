@@ -30,12 +30,24 @@ const TAB_SIZE: usize = 8;
 const ALT_TAB_SIZE: usize= 1;
 const SPACE_INDENT_SIZE: usize = 4;
 
+static  triple_quote: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"""""#).expect("regex"));
+
+static  triple_quote_and_content: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#""""[.\n]?"#).expect("regex"));
+
+static  triple_quote_and_precontent: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"[.\n]?""""#).expect("regex"));
+
 static SPACE_TAB_FORMFEED_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A[ \f\t]+").expect("regex"));
+
 static ANY_NON_NEWLINE_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A[^\r\n]+").expect("regex"));
+
 static STRING_PREFIX_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A(?i)(u|[bf]r|r[bf]|r|b|f)").expect("regex"));
+
 static POTENTIAL_IDENTIFIER_TAIL_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A([a-zA-Z0-9_]|[^\x00-\x7f])+").expect("regex"));
 // static DECIMAL_DOT_DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A\.[0-9]").expect("regex"));
