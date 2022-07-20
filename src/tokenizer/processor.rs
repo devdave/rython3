@@ -18,7 +18,6 @@ use super::{
 use once_cell::sync::Lazy;
 use regex::{Regex};
 use std::io::{Read};
-use crate::tokenizer::error::TokError::UnterminatedTripleQuotedString;
 
 // use std::str::Chars;
 
@@ -326,23 +325,19 @@ impl Processor {
                 product.push(Token::Make(TType::Number, lineno, current_idx - retval.len(), current_idx, &retval));
                 has_statenent = true;
             }
+            //Absorb  any spaces
             else if let Some((_current_idx, _retval )) = line.test_and_return(&SPACE_TAB_FORMFEED_RE.to_owned()) {
-                // pass/ignore WS
+            // pass/ignore WS - TODO REFACTOR!
             } else if Some('\\') == line.peek() {
                 self.string_continues = true;
                 let _ = line.get();
             }
-            else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r#"^"{3}.*"#).expect("regex")) {
-
-                println!("Found the start of a triple quoted string!");
-                if let Ok(closed_str) = self.handle_triple_quote(current_idx, retval.to_string()) {
-                    println!("I got the string {:?}", closed_str);
-                    product.push(Token::Make(TType::String, lineno, current_idx, closed_str.len()+current_idx, closed_str.as_str()));
-                } else {
-                    return Err(TokError::UnterminatedTripleQuotedString);
+            // Seek and then handle """ tokens
+            else if let Some((current_idx, match_str)) = line.test_and_return(&triple_quote_and_content.to_owned()) {
+                match self.handle_triple_quote(current_idx, match_str) {
+                    Ok(GoodToken) => { product.push(GoodToken ) },
+                    Err(Issue) => { return Err(TokError::UnterminatedTripleQuotedString ) },
                 }
-
-
             }
             else {
                 let chr = line.get().unwrap();
@@ -363,63 +358,45 @@ impl Processor {
 
     }
 
-    fn handle_triple_quote(&mut self, current_idx: usize, collected: String) -> Result<String, TokError> {
-        println!("Attempting to process {}-{:?}", current_idx, collected);
-        // is the collected line just the triple quotes?
-        let mut str_collected = "".to_string();
-        let mut working_line = collected;
-        let triple_quote = r#"""""#;
+    fn handle_triple_quote(&mut self, starting_idx: usize, match_str: &str) -> Result<Token, TokError> {
 
-        if working_line.trim().starts_with(triple_quote) {
-            println!("working_line starts with triple quote");
+        let mut str_collect = triple_quote.replace(match_str, "").to_string();
+        let start_lineno = self.module.get_lineno();
+        let mut end_lineno: usize = start_lineno;
 
-            if working_line.trim().len() == 3 {
-                // Lets grab the next line and move on to search for triple quote
-                println!("Fetching next line");
-                if let Some(module_line) = self.module.get() {
-                    println!("Next line is {:?}", module_line);
-                    working_line = module_line.text;
-                    str_collected.push('\n');
-                } else {
-                    return Err(TokError::UnterminatedTripleQuotedString);
+
+        println!("str collection == {:?}", str_collect);
+
+        //At this point, assume the triple quote state has started seeking for its closing pair
+        // and collecting along the way.
+        // NOTE this can eat up the rest of the module and in that case will throw an error
+        for line in self.module.clone() {
+            end_lineno = line.idx;
+            if let Some(matched) = triple_quote_and_precontent.find(line.text.as_str()){
+                if matched.start() == 0 && line.text.len() == 3 {
+                    assert_eq!(matched.as_str(), r#"""""#);
+                    break;
+                }
+                else if matched.start() > 0 {
+                    let prefix: String = line.text[..].graphemes(true).take(matched.start()).collect();
+                    str_collect = format!("{}{}",str_collect, prefix);
+                }
+                else if matched.start() == 0 {
+                    // Do nothing, we're closing up
+                    break;
                 }
             } else {
-
-                working_line = working_line[3..].to_string();
-                if working_line.trim().ends_with(triple_quote) {
-                    println!("I found a close to my triple string! {:?}", working_line);
-                    return Ok(working_line[..3].to_string());
-
-                } else {
-                    panic!("What do I have here? {:?}", working_line);
-                }
+                str_collect = format!("{}{}", str_collect, line.text);
             }
 
         }
 
-        println!("Starting loop");
-        loop {
-            if working_line.trim().starts_with(triple_quote){
-                // We are done!
-                println!("loop - Working line starts with triple");
-                return Ok(str_collected);
-            }
-            else if working_line.trim().ends_with(triple_quote) {
-                str_collected = format!("{}{}", str_collected, working_line[..3].to_string());
-                return Ok(str_collected);
-            }else {
-                str_collected = format!("{}{}", str_collected, working_line);
-                if let Some(managed_line ) = self.module.get() {
-                    working_line = managed_line.text.to_string();
-                } else if str_collected.len() == 0 {
-                    return Err(UnterminatedTripleQuotedString);
-                } else {
-                    return Ok(str_collected);
-                }
-            }
-
+        if str_collect.len() > 0 {
+            return Ok(Token::Make(TType::String, start_lineno, starting_idx, end_lineno, str_collect.as_str() ));
         }
 
+
+        return Err(TokError::UnterminatedTripleQuotedString);
     }
 
     ///Currently only focus on handling triple quote strings
@@ -433,10 +410,67 @@ impl Processor {
 
 #[cfg(test)]
 mod tests {
+    use regex::Regex;
+    use unicode_segmentation::UnicodeSegmentation;
     use crate::Processor;
+    use crate::tokenizer::module_lines::ModuleLines;
     use crate::tokenizer::operators::OPERATOR_RE;
     use crate::tokenizer::processor::ManagedLine;
     use crate::tokenizer::ttype::TType;
+
+    #[test]
+    fn experiment_simulate_triple_quote_environment() {
+        let mut temp : Vec<String> = Vec::new();
+        temp.push(r#""""\n"#.to_string());
+        temp.push("     Hello\n".to_string());
+        temp.push("World    \n".to_string());
+        temp.push(r#""""\n"#.to_string());
+
+        let mut lines = ModuleLines::Make(temp, "__experiment__".to_string());
+
+
+
+
+        let mut str_collect : String = "".to_string();
+        let has_triple = Regex::new(r#"""""#).expect("regex");
+
+        let mut first_line = lines.get().unwrap();
+
+
+        
+        if let Some(matched) = has_triple.find(first_line.text.as_str()) {
+            println!("found opening triple quote {:?}", matched.as_str());
+            str_collect = format!("{}{}", str_collect, has_triple.replace(first_line.text.as_str(), ""));
+        }
+
+        println!("str collection == {:?}", str_collect);
+
+
+        //At this point, assume the triple quote state has started seeking for its closing pair
+        // and collecting along the way.
+        for line in lines {
+            if let Some(matched) = has_triple.find(line.text.as_str()){
+                if matched.start() == 0 && line.text.len() == 3 {
+                    break;
+                }
+                else if matched.start() > 0 {
+                    let prefix: String = line.text[..].graphemes(true).take(matched.start()).collect();
+                    str_collect = format!("{}{}",str_collect, prefix);
+                }
+                else if matched.start() == 0 {
+                    // Do nothing, we're closing up
+                    break;
+                }
+            } else {
+                str_collect = format!("{}{}", str_collect, line.text);
+            }
+
+
+        }
+
+
+        println!("The cat dragged in {:?}", str_collect);
+    }
 
 
     #[test]
@@ -484,7 +518,8 @@ r#"
 """
 "#;
 
-        let tokens = Processor::consume_string(data.to_string(), Some("__test__".to_string())).run().expect("tokens");
+        let mut engine = Processor::consume_string(data.to_string(), Some("__test__".to_string()));
+        let tokens = engine.run().expect("tokens");
         println!("Processor consumes triple strings v2 got {:?}", tokens);
 
         assert_eq!(tokens[2].r#type, TType::String);
