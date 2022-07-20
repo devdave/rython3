@@ -322,7 +322,7 @@ impl Processor {
 
             }
             // look for numbers
-            else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A[0-9\.]+").expect("regex")) {
+            else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\d+").expect("regex")) {
                 product.push(Token::Make(TType::Number, lineno, current_idx - retval.len(), current_idx, &retval));
                 has_statenent = true;
             }
