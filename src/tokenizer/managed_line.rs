@@ -1,4 +1,6 @@
-use regex::Regex;
+
+use regex::{Regex};
+use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Clone)]
 pub struct ManagedLine {
@@ -73,5 +75,9 @@ impl ManagedLine {
             return Some((self.idx.clone(), found.as_str()));
         }
         None
+    }
+
+    pub fn advance(&mut self, amount: usize) {
+        self.idx += amount;
     }
 }
