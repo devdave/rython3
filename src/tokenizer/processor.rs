@@ -135,14 +135,16 @@ impl Processor {
     }
 
     pub fn consume_string(input: String, module_name: Option<String>) -> Self {
-        let lines = if input.contains("\r\n") {
-            input.split("\r\n").map(|l| l.to_string()).collect()
+        let product = if input.contains("\r\n") {
+            input.split("\r\n")
         } else {
-            input.split("\n").map(|l| l.to_string()).collect()
+            input.split("\n")
         };
 
-        println!("Processing string into Vector {:?}", lines);
-        return Processor::initialize(lines, module_name);
+        let content = product.map(|l| format!("{}{}", l, '\n').to_string()).collect();
+
+        println!("Processing string into Vector {:?}", content);
+        return Processor::initialize(content, module_name);
 
     }
 
