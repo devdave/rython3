@@ -15,7 +15,7 @@ impl ManagedLine {
 
     pub fn Make(lineno: usize, input: String) -> Self {
         let mut hack = Self {
-            lineno: lineno,
+            lineno,
             idx: 0,
             text: input,
             content: vec!['b'],
@@ -25,7 +25,7 @@ impl ManagedLine {
         return hack;
     }
 
-    pub fn get_idx(&mut self) -> usize {
+    pub fn get_idx(&self) -> usize {
         self.idx
     }
 
