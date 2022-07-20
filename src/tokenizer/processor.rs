@@ -26,7 +26,7 @@ use std::io::{Read};
 const MAX_INDENT: usize = 100;
 const MAX_CHAR: char = char::MAX;
 const TAB_SIZE: usize = 8;
-const ALT_TAB_SIZE: usize= 1;
+// const ALT_TAB_SIZE: usize= 1;
 const SPACE_INDENT_SIZE: usize = 4;
 
 static  triple_quote: Lazy<Regex> =
@@ -336,7 +336,7 @@ impl Processor {
             else if let Some((current_idx, match_str)) = line.test_and_return(&triple_quote_and_content.to_owned()) {
                 match self.handle_triple_quote(current_idx, match_str) {
                     Ok(GoodToken) => { product.push(GoodToken ) },
-                    Err(Issue) => { return Err(TokError::UnterminatedTripleQuotedString ) },
+                    Err(_) => { return Err(TokError::UnterminatedTripleQuotedString ) },
                 }
             }
             else {
@@ -434,7 +434,7 @@ mod tests {
         let mut str_collect : String = "".to_string();
         let has_triple = Regex::new(r#"""""#).expect("regex");
 
-        let mut first_line = lines.get().unwrap();
+        let first_line = lines.get().unwrap();
 
 
         
