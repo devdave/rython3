@@ -60,13 +60,29 @@ impl ModuleLines {
         self.content.len()
     }
 
+    pub fn advance_to(&mut self, new_idx: usize) {
+        self.idx = new_idx;
+    }
+
+    pub fn advance_one(&mut self) {
+        self.idx += 1;
+    }
 
 }
 
 impl Iterator for ModuleLines {
-    type Item = ManagedLine;
+    type Item = (usize, ManagedLine);
+
     fn next(&mut self) -> Option<Self::Item> {
-        return self.get();
+
+        if let Some(temp) = self.get(){
+            return Some((self.idx, temp));
+        } else {
+            return None;
+        }
+
+
+
     }
 
 }
