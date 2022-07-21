@@ -18,6 +18,7 @@ use super::{
 use once_cell::sync::Lazy;
 use regex::{Regex};
 use std::io::{Read};
+use log::{error, info};
 
 // use std::str::Chars;
 
@@ -30,13 +31,13 @@ const TAB_SIZE: usize = 8;
 const SPACE_INDENT_SIZE: usize = 4;
 
 static  triple_quote: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r#"""""#).expect("regex"));
+    Lazy::new(|| Regex::new(r#"\A""""#).expect("regex"));
 
 static  triple_quote_and_content: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r#""""[.\n]?"#).expect("regex"));
+    Lazy::new(|| Regex::new(r#"\A"""[.\n]?"#).expect("regex"));
 
 static  triple_quote_and_precontent: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r#"[.\n]?""""#).expect("regex"));
+    Lazy::new(|| Regex::new(r#"\A[.\n]?""""#).expect("regex"));
 
 static SPACE_TAB_FORMFEED_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A[ \f\t]+").expect("regex"));
@@ -49,13 +50,6 @@ static STRING_PREFIX_RE: Lazy<Regex> =
 
 static POTENTIAL_IDENTIFIER_TAIL_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A([a-zA-Z0-9_]|[^\x00-\x7f])+").expect("regex"));
-// static DECIMAL_DOT_DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A\.[0-9]").expect("regex"));
-// static DECIMAL_TAIL_RE: Lazy<Regex> =
-//     Lazy::new(|| Regex::new(r"\A[0-9](_?[0-9])*").expect("regex"));
-// static HEXADECIMAL_TAIL_RE: Lazy<Regex> =
-//     Lazy::new(|| Regex::new(r"\A(_?[0-9a-fA-F])+").expect("regex"));
-// static OCTAL_TAIL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A(_?[0-7])+").expect("regex"));
-// static BINARY_TAIL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A(_?[01])+").expect("regex"));
 static POSSIBLE_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A[a-zA-Z]{1}[\w\d]+").expect("regex"));
 
 
@@ -94,11 +88,8 @@ pub struct Processor {
     */
     string_continues: bool,
     string_continue_startline: usize,
-    string_continue_buffer: Vec<String>,
-    /**
-    Not used, to be cut
-    */
-    line_blank: bool,
+    string_continue_buffer: String,
+
     pub module: ModuleLines,
 
 }
@@ -115,8 +106,7 @@ impl Processor {
             last_line_was_blank: false,
             string_continues: false,
             string_continue_startline: 0,
-            string_continue_buffer: Vec::new(),
-            line_blank: false,
+            string_continue_buffer: "".to_string(),
             module: ModuleLines::Make(lines, name),
         }
     }
@@ -142,7 +132,7 @@ impl Processor {
 
         let content = product.map(|l| format!("{}{}", l, '\n').to_string()).collect();
 
-        println!("Processing string into Vector {:?}", content);
+        info!("Processing string into Vector {:?}", content);
         return Processor::initialize(content, module_name);
 
     }
@@ -156,7 +146,7 @@ impl Processor {
         let mut body: Vec<Token> = Vec::new();
 
         // For now, ALWAYS assume UTF-8 encoding for files.
-        body.push(Token::Make(TType::Encoding, 1, 0, 0, "utf-8"));
+        body.push(Token::Make(TType::Encoding, 0, 0, 0, "utf-8"));
 
         // let error: TokError;
 
@@ -182,9 +172,12 @@ impl Processor {
                 }
             }
 
-
-
         } // End While
+
+        if self.string_continues == true {
+            //We are out of lines
+            panic!("Lines exhausted but string not closed!");
+        }
 
         if self.paren_stack.len() > 0 {
             let (hopefully_last, _lineno) = self.paren_stack.pop().unwrap();
@@ -212,76 +205,98 @@ impl Processor {
 
         let mut line = self.module.get().expect("Expected a line in module");
         let mut product: Vec<Token> = Vec::new();
+        let mut has_statenent = false;
 
         let lineno = line.lineno;
 
-
+        if self.string_continues == false {
         //Deal with empty lines first
-        if line.text.len() == 0 || line.text == "" {
-            // Assume ALL NL and Newlines are \n and not \r or \r\n - *nix or gtfo.
+            if line.text.len() == 0 || line.text == "" {
+                // Assume ALL NL and Newlines are \n and not \r or \r\n - *nix or gtfo.
 
 
-            if self.indent_stack.len() > 0 {
+                if self.indent_stack.len() > 0 {
+                    while self.indent_stack.len() > 0 {
+                        self.indent_stack.pop();
+                        product.push(Token::Make(TType::Dedent, line.lineno, 0, 0, &line.text[..]));
+                    }
+                }
+
+                product.push(Token::Make(TType::NL, line.lineno, 0, 1,"\n"));
+
+                return Ok(product);
+            }
+
+            //Consume the beginning of the line and handle indentations and dedentations
+            let ws_match = SPACE_TAB_FORMFEED_RE.find(&line.text[..]);
+            if let Some(whitespace) = ws_match {
+                let current_size = whitespace.end() - whitespace.start();
+                let last_size = self.indent_stack.last().unwrap_or(&0);
+
+                match current_size.cmp(last_size) {
+                    Ordering::Greater => {
+                        //We are handing an indent
+                        if self.indent_stack.len() + 1 > MAX_INDENT {
+                            return Err(TokError::TooDeep);
+                        }
+                        self.indent_stack.push(current_size);
+                        product.push(Token::Make(TType::Indent, line.lineno, 0, current_size, whitespace.as_str()));
+                    },
+                    Ordering::Less => {
+                        //We are handling 1 or more dedents
+                        while self.indent_stack.len() > 0 {
+                            let last_indent_size = self.indent_stack.pop().unwrap();
+                            product.push(Token::Make(TType::Dedent, line.lineno, 0, current_size, ""));
+                            if last_indent_size == current_size {
+                                break;
+                            }
+                        }
+
+                    },
+                    Ordering::Equal => {
+                        //No operation
+                    }
+                }
+
+            }
+            else if self.indent_stack.len() > 0 {
+                //Handle edge case where dedent has gone all the way to zero
                 while self.indent_stack.len() > 0 {
                     self.indent_stack.pop();
-                    product.push(Token::Make(TType::Dedent, line.lineno, 0, 0, &line.text[..]));
+                    product.push(Token::Make(TType::Dedent, line.lineno, 0, 0, ""));
                 }
             }
 
-            product.push(Token::Make(TType::NL, line.lineno, 0, 1,"\n"));
-
-            return Ok(product);
-        }
-
-        //Consume the beginning of the line and handle indentations and dedentations
-        let ws_match = SPACE_TAB_FORMFEED_RE.find(&line.text[..]);
-        if let Some(whitespace) = ws_match {
-            let current_size = whitespace.end() - whitespace.start();
-            let last_size = self.indent_stack.last().unwrap_or(&0);
-
-            match current_size.cmp(last_size) {
-                Ordering::Greater => {
-                    //We are handing an indent
-                    if self.indent_stack.len() + 1 > MAX_INDENT {
-                        return Err(TokError::TooDeep);
-                    }
-                    self.indent_stack.push(current_size);
-                    product.push(Token::Make(TType::Indent, line.lineno, 0, current_size, whitespace.as_str()));
-                },
-                Ordering::Less => {
-                    //We are handling 1 or more dedents
-                    while self.indent_stack.len() > 0 {
-                        let last_indent_size = self.indent_stack.pop().unwrap();
-                        product.push(Token::Make(TType::Dedent, line.lineno, 0, current_size, ""));
-                        if last_indent_size == current_size {
-                            break;
-                        }
-                    }
-
-                },
-                Ordering::Equal => {
-                    //No operation
-                }
-            }
+            //Skip whitespace
+            let mut _ignore_me = line.test_and_return(&SPACE_TAB_FORMFEED_RE.to_owned());
 
         }
-        else if self.indent_stack.len() > 0 {
-            //Handle edge case where dedent has gone all the way to zero
-            while self.indent_stack.len() > 0 {
-                self.indent_stack.pop();
-                product.push(Token::Make(TType::Dedent, line.lineno, 0, 0, ""));
-            }
-        }
-
-        //Skip whitespace
-        let mut _ignore_me = line.test_and_return(&SPACE_TAB_FORMFEED_RE.to_owned());
-        let mut has_statenent = false;
 
         while line.peek() != None {
 
+            //State flags go here
 
+            if self.string_continues == true {
+                debug!("Inside TQ3 shortcircuit");
+                if let Some((current_idx, retval)) = line.test_and_return(&triple_quote.to_owned()) {
+                    self.string_continue_buffer.push_str(retval);
+
+                    product.push(Token::Make(TType::String, lineno, current_idx, current_idx, self.string_continue_buffer.as_str() ));
+
+                    //Clean up
+                    self.string_continues = false;
+                    self.string_continue_buffer = "".to_string();
+
+                } else {
+
+                    let chr = line.get().unwrap();
+                    debug!("TQ3 flagged and absorbing {:?}", chr);
+                    self.string_continue_buffer.push(chr);
+                }
+
+            }
             //Look for a comment and consume all after it.
-            if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\#.*").expect("regex")) {
+            else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\#.*").expect("regex")) {
                 product.push(Token::Make(TType::Comment, lineno, current_idx - &retval.len(), current_idx, &retval));
             }
             // Look for a operator
@@ -315,8 +330,8 @@ impl Processor {
 
             }
             // like Regex says, look for non-quoted strings
-            else if let Some((current_idx, strreturn)) = line.test_and_return(&POSSIBLE_NAME.to_owned()) {
-                product.push(Token::Make(TType::Name, lineno, current_idx - strreturn.len(), current_idx, &strreturn));
+            else if let Some((current_idx, retval)) = line.test_and_return(&POSSIBLE_NAME.to_owned()) {
+                product.push(Token::Make(TType::Name, lineno, current_idx - retval.len(), current_idx, &retval));
                 has_statenent = true;
 
             }
@@ -333,18 +348,20 @@ impl Processor {
                 let _ = line.get();
             }
             // Seek and then handle """ tokens
-            else if let Some((current_idx, match_str)) = line.test_and_return(&triple_quote_and_content.to_owned()) {
-                match self.handle_triple_quote(current_idx, match_str) {
-                    Ok(GoodToken) => { product.push(GoodToken ) },
-                    Err(_) => { return Err(TokError::UnterminatedTripleQuotedString ) },
-                }
+            else if let Some((current_idx, match_str)) = line.test_and_return(&triple_quote.to_owned()) {
+                debug!("TQ3 matched on {}:{:?}", self.module.get_lineno(), match_str);
+                self.string_continues = true;
+                self.string_continue_buffer = match_str.to_string();
+
+
             }
             else {
                 let chr = line.get().unwrap();
-                println!("Did not capture: {:?} - #{}", chr, lineno);
+                error!("Did not capture: {:?} - #{}", chr, lineno);
             }
 
-        }
+        } // end while line peek
+
 
 
         if has_statenent == true && self.string_continues == false {
@@ -358,58 +375,14 @@ impl Processor {
 
     }
 
-    fn handle_triple_quote(&mut self, starting_idx: usize, match_str: &str) -> Result<Token, TokError> {
-
-        let mut str_collect = triple_quote.replace(match_str, "").to_string();
-        let start_lineno = self.module.get_lineno();
-        let mut end_lineno: usize = start_lineno;
 
 
-        println!("str collection == {:?}", str_collect);
-
-        //At this point, assume the triple quote state has started seeking for its closing pair
-        // and collecting along the way.
-        // NOTE this can eat up the rest of the module and in that case will throw an error
-        for line in self.module.clone() {
-            end_lineno = line.idx;
-            if let Some(matched) = triple_quote_and_precontent.find(line.text.as_str()){
-                if matched.start() == 0 && line.text.len() == 3 {
-                    assert_eq!(matched.as_str(), r#"""""#);
-                    break;
-                }
-                else if matched.start() > 0 {
-                    let prefix: String = line.text[..].graphemes(true).take(matched.start()).collect();
-                    str_collect = format!("{}{}",str_collect, prefix);
-                }
-                else if matched.start() == 0 {
-                    // Do nothing, we're closing up
-                    break;
-                }
-            } else {
-                str_collect = format!("{}{}", str_collect, line.text);
-            }
-
-        }
-
-        if str_collect.len() > 0 {
-            return Ok(Token::Make(TType::String, start_lineno, starting_idx, end_lineno, str_collect.as_str() ));
-        }
-
-
-        return Err(TokError::UnterminatedTripleQuotedString);
-    }
-
-    ///Currently only focus on handling triple quote strings
-    fn handle_string_continuation(&mut self, _: ManagedLine) -> Result<Vec<Token>, TokError> {
-
-
-        Err(TokError::BadIdentifier("Not implemented"))
-    }
 }
 
 
 #[cfg(test)]
 mod tests {
+    use log::{debug, info};
     use regex::Regex;
     use unicode_segmentation::UnicodeSegmentation;
     use crate::Processor;
@@ -419,57 +392,11 @@ mod tests {
     use crate::tokenizer::ttype::TType;
 
     #[test]
-    fn experiment_simulate_triple_quote_environment() {
-        let mut temp : Vec<String> = Vec::new();
-        temp.push(r#""""\n"#.to_string());
-        temp.push("     Hello\n".to_string());
-        temp.push("World    \n".to_string());
-        temp.push(r#""""\n"#.to_string());
+    fn rust_experiment() {
+        let mut actual = "".to_string();
+        actual.push('\n');
+        assert_eq!(actual, "\n");
 
-        let mut lines = ModuleLines::Make(temp, "__experiment__".to_string());
-
-
-
-
-        let mut str_collect : String = "".to_string();
-        let has_triple = Regex::new(r#"""""#).expect("regex");
-
-        let first_line = lines.get().unwrap();
-
-
-        
-        if let Some(matched) = has_triple.find(first_line.text.as_str()) {
-            println!("found opening triple quote {:?}", matched.as_str());
-            str_collect = format!("{}{}", str_collect, has_triple.replace(first_line.text.as_str(), ""));
-        }
-
-        println!("str collection == {:?}", str_collect);
-
-
-        //At this point, assume the triple quote state has started seeking for its closing pair
-        // and collecting along the way.
-        for line in lines {
-            if let Some(matched) = has_triple.find(line.text.as_str()){
-                if matched.start() == 0 && line.text.len() == 3 {
-                    break;
-                }
-                else if matched.start() > 0 {
-                    let prefix: String = line.text[..].graphemes(true).take(matched.start()).collect();
-                    str_collect = format!("{}{}",str_collect, prefix);
-                }
-                else if matched.start() == 0 {
-                    // Do nothing, we're closing up
-                    break;
-                }
-            } else {
-                str_collect = format!("{}{}", str_collect, line.text);
-            }
-
-
-        }
-
-
-        println!("The cat dragged in {:?}", str_collect);
     }
 
 
@@ -504,11 +431,6 @@ mod tests {
         assert_eq!(indents, dedents);
     }
 
-    // #[test]
-    // fn processor_consumes_triple_quote_strings() {
-    //     let tokens = Processor::Consume_file("test_fixtures/multiline_strings.py").expect("Expected vec<Tokens");
-    // }
-
     #[test]
     fn processor_consumes_triple_strings_v2 () {
         let data =
@@ -517,17 +439,35 @@ r#"
     This is a test!
 """
 "#;
+        let expected =
+r#""""
+    This is a test!
+""""#;
+
 
         let mut engine = Processor::consume_string(data.to_string(), Some("__test__".to_string()));
         let tokens = engine.run().expect("tokens");
-        println!("Processor consumes triple strings v2 got {:?}", tokens);
 
-        assert_eq!(tokens[2].r#type, TType::String);
-        assert_eq!(tokens[2].text, "\n    This is a test!\n");
+        println!("Got {} tokens", tokens.len());
+        for token in &tokens {
+            println!("{:?}", token);
+        }
+
+
+        assert_eq!(tokens[4].r#type, TType::String);
+        assert_eq!(tokens[4].text, expected);
 
 
     }
 
+    #[test]
+    fn processor_absorbs_multiline_triple_quoted_strings() {
+
+        let mut engine = Processor::consume_file("test_fixtures/multiline_strings.py", Some("__multiline__".to_string()));
+        println!("Attempting multiline test");
+        let tokens = engine.run().expect("tokens");
+        println!("Processor generated {:?} tokens - {:?}", tokens.len(), tokens);
+    }
 
 
     #[test]
