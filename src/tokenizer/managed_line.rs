@@ -32,8 +32,8 @@ impl ManagedLine {
     pub fn get(&mut self) -> Option<char> {
 
         if self.content.len() > self.idx {
+
             let retval = self.content[self.idx] as char;
-            // let retval = self.content.get(self.idx).unwrap() as char;
             self.idx += 1;
             Some(retval)
         } else {
