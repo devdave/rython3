@@ -12,3 +12,5 @@ regex = "1.5.4"
 thiserror = "1.0.23"
 unicode-segmentation = "1"
 peg = { git = "https://github.com/kevinmehall/rust-peg", rev = "4b146b4b78a80c07e43d7ace2d97f65bfde279a8" }
+log = "0.4"
+pretty_env_logger = "0.3.1"
