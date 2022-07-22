@@ -24,9 +24,9 @@ fn main() {
         if let Ok(retval) = result {
             for element in retval.iter() {
 
-                let token_range = format!("{},{}-{},{}:", element.lineno, element.col_start, element.line_end, element.col_end);
+                let token_range = format!("{},{}-{},{}:", element.line_start, element.col_start, element.line_end, element.col_end);
 
-                println!("{:20}  {:15?} {:15?}",
+                println!("{:20}  {:15?} '{:15?}'",
                          token_range,
                          element.r#type,
                          element.text);
