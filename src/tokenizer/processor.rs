@@ -349,10 +349,11 @@ impl Processor {
                 let _ = line.get();
             }
             // Seek and then handle """ tokens
-            else if let Some((current_idx, match_str)) = line.test_and_return(&triple_quote.to_owned()) {
+            else if let Some((_current_idx, match_str)) = line.test_and_return(&triple_quote.to_owned()) {
                 debug!("TQ3 matched on {}:{:?}", self.module.get_lineno(), match_str);
                 self.string_continues = true;
                 self.string_continue_buffer = match_str.to_string();
+                self.string_continue_startline = lineno;
 
 
             }
@@ -372,6 +373,7 @@ impl Processor {
                 product.push(Token::Make(TType::NL, lineno, line.get_idx(),  lineno,line.get_idx()+1, "\n"));
             }
         }
+
 
 
         Ok(product)
@@ -538,8 +540,4 @@ r#""""
 
 
     }
-
-
-
-
 }
