@@ -60,9 +60,9 @@ impl ModuleLines {
         self.content.len()
     }
 
-    pub fn advance_to(&mut self, new_idx: usize) {
-        self.idx = new_idx;
-    }
+    // pub fn advance_to(&mut self, new_idx: usize) {
+    //     self.idx = new_idx;
+    // }
 
     pub fn advance_one(&mut self) {
         self.idx += 1;

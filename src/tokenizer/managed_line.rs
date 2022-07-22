@@ -1,6 +1,6 @@
 
 use regex::{Regex};
-use unicode_segmentation::UnicodeSegmentation;
+// use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Clone)]
 pub struct ManagedLine {
@@ -20,6 +20,7 @@ impl ManagedLine {
             text: input,
             content: vec!['b'],
         };
+
         hack.content = hack.text[..].to_string().chars().collect();
 
         return hack;

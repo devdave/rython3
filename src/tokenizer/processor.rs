@@ -4,7 +4,6 @@ use std::cmp::Ordering;
 
 use std::fs::File;
 
-use unicode_segmentation::UnicodeSegmentation;
 
 use super::{
     token::Token,
@@ -13,7 +12,7 @@ use super::{
     operators::OPERATOR_RE,
     managed_line::ManagedLine,
     module_lines::ModuleLines,
-    position::Position,
+
 };
 
 use once_cell::sync::Lazy;
@@ -26,10 +25,10 @@ use log::{error, info};
 //Copied from LIBCST
 //TODO relcoate to a common rgxs.rs file?
 const MAX_INDENT: usize = 100;
-const MAX_CHAR: char = char::MAX;
-const TAB_SIZE: usize = 8;
-// const ALT_TAB_SIZE: usize= 1;
-const SPACE_INDENT_SIZE: usize = 4;
+// const MAX_CHAR: char = char::MAX;
+// const TAB_SIZE: usize = 8;
+// // const ALT_TAB_SIZE: usize= 1;
+// const SPACE_INDENT_SIZE: usize = 4;
 
 static  triple_quote: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"\A""""#).expect("regex"));
@@ -39,6 +38,17 @@ static  triple_quote_and_content: Lazy<Regex> =
 
 static  triple_quote_and_precontent: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"\A[.\n]?""""#).expect("regex"));
+
+
+static single_quote_string: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"\A""#).expect("regex"));
+
+static single_quote_string_content: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"\A"[.\n]?"#).expect("regex"));
+
+static single_quote_string_precontent: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"\A[.\n]?""#).expect("regex"));
+
 
 static SPACE_TAB_FORMFEED_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A[ \f\t]+").expect("regex"));
@@ -87,6 +97,7 @@ pub struct Processor {
     /**
     Was the last line an open string or ( or something along those lines?
     */
+    string_is_triple: bool,
     string_continues: bool,
     string_continue_startline: usize,
     string_continue_buffer: String,
@@ -105,6 +116,7 @@ impl Processor {
             indent_stack: Vec::new(),
             paren_stack: Vec::new(),
             last_line_was_blank: false,
+            string_is_triple: false,
             string_continues: false,
             string_continue_startline: 0,
             string_continue_buffer: "".to_string(),
@@ -282,20 +294,17 @@ impl Processor {
                 if let Some((current_idx, retval)) = line.test_and_return(&triple_quote.to_owned()) {
                     self.string_continue_buffer.push_str(retval);
 
-                    product.push(Token::Make(TType::String, self.string_continue_startline, current_idx, current_idx,  0,self.string_continue_buffer.as_str() ));
+                    product.push(Token::Make(TType::String, self.string_continue_startline, current_idx, current_idx, 0, self.string_continue_buffer.as_str()));
 
                     //Clean up
                     self.string_continues = false;
                     self.string_continue_buffer = "".to_string();
                     has_statenent = true;
-
                 } else {
-
                     let chr = line.get().unwrap();
                     debug!("TQ3 flagged and absorbing {:?}", chr);
                     self.string_continue_buffer.push(chr);
                 }
-
             }
             //Look for a comment and consume all after it.
             else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\#.*").expect("regex")) {
@@ -303,12 +312,11 @@ impl Processor {
             }
             // Look for a operator
             else if let Some((current_idx, retval)) = line.test_and_return(&OPERATOR_RE.to_owned()) {
-
                 let char_retval = retval.chars().nth(0).unwrap();
 
-                if retval.len() == 1 && retval.contains(&['[','(']) {
-                    self.paren_stack.push( (char_retval, lineno) );
-                } else if retval.contains(&[']',')']) {
+                if retval.len() == 1 && retval.contains(&['[', '(']) {
+                    self.paren_stack.push((char_retval, lineno));
+                } else if retval.contains(&[']', ')']) {
                     let last_paren = self.paren_stack.last();
                     match last_paren {
                         Some((verify_char, _ignore)) => {
@@ -316,7 +324,7 @@ impl Processor {
                                 self.paren_stack.pop();
                             } else if *verify_char == '[' && char_retval == ']' {
                                 self.paren_stack.pop();
-                            }else {
+                            } else {
                                 return Err(TokError::MismatchedClosingParen(*verify_char, char_retval));
                             }
                         },
@@ -326,16 +334,13 @@ impl Processor {
                     }
                 }
 
-                product.push(Token::Make(TType::Op, lineno, current_idx - &retval.len(), lineno, current_idx ,&retval));
+                product.push(Token::Make(TType::Op, lineno, current_idx - &retval.len(), lineno, current_idx, &retval));
                 has_statenent = true;
-
-
             }
             // like Regex says, look for non-quoted strings
             else if let Some((current_idx, retval)) = line.test_and_return(&POSSIBLE_NAME.to_owned()) {
                 product.push(Token::Make(TType::Name, lineno, current_idx - retval.len(), lineno, current_idx, &retval));
                 has_statenent = true;
-
             }
             // look for numbers
             else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\d+").expect("regex")) {
@@ -343,12 +348,13 @@ impl Processor {
                 has_statenent = true;
             }
             //Absorb  any spaces
-            else if let Some((_current_idx, _retval )) = line.test_and_return(&SPACE_TAB_FORMFEED_RE.to_owned()) {
-            // pass/ignore WS - TODO REFACTOR!
+            else if let Some((_current_idx, _retval)) = line.test_and_return(&SPACE_TAB_FORMFEED_RE.to_owned()) {
+                // pass/ignore WS - TODO REFACTOR!
             } else if Some('\\') == line.peek() {
                 self.string_continues = true;
                 let _ = line.get();
             }
+
             // Seek and then handle """ tokens
             else if let Some((_current_idx, match_str)) = line.test_and_return(&triple_quote.to_owned()) {
                 debug!("TQ3 matched on {}:{:?}", self.module.get_lineno(), match_str);
@@ -356,6 +362,11 @@ impl Processor {
                 self.string_continue_buffer = match_str.to_string();
                 self.string_continue_startline = lineno;
 
+
+            }
+            //See and handle single quote strings
+            else if let Some((current_idx, match_str)) = line.test_and_return(&single_quote_string.to_owned()) {
+                println!("SQ matched @ {}:{} {:?}", self.module.get_lineno(), current_idx, match_str);
 
             }
             else {
@@ -388,14 +399,21 @@ impl Processor {
 
 #[cfg(test)]
 mod tests {
-    use log::{debug, info};
-    use regex::Regex;
-    use unicode_segmentation::UnicodeSegmentation;
+
     use crate::Processor;
-    use crate::tokenizer::module_lines::ModuleLines;
+    // use crate::tokenizer::module_lines::ModuleLines;
     use crate::tokenizer::operators::OPERATOR_RE;
     use crate::tokenizer::processor::ManagedLine;
     use crate::tokenizer::ttype::TType;
+    use crate::tokenizer::token::Token;
+
+
+    fn print_tokens(tokens: &Vec<Token>) {
+        println!("Got {} tokens", tokens.len());
+        for (idx, token) in tokens.iter().enumerate() {
+            println!("{}: {:?}", idx, token);
+        }
+    }
 
     #[test]
     fn rust_experiment() {
@@ -417,6 +435,7 @@ mod tests {
 
         let tokens = Processor::consume_file("test_fixtures/basic_indent.py", Some("__test__".to_string())).run().expect("Tokens");
         assert!(tokens.len() > 1);
+        print_tokens(&tokens);
     }
 
     #[test]
@@ -460,10 +479,19 @@ r#""""
         }
 
 
-        assert_eq!(tokens[4].r#type, TType::String);
-        assert_eq!(tokens[4].text, expected);
+        assert_eq!(tokens[2].r#type, TType::String);
+        assert_eq!(tokens[2].text, expected);
 
 
+    }
+
+    #[test]
+    fn processor_properly_consumes_single_quote_strings_basic() {
+        let mut engine = Processor::consume_file("test_fixtures/simple_string.py", Some("_simple_string_".to_string()));
+        let tokens = engine.run().expect("Tokens");
+        print_tokens(&tokens);
+
+        assert_eq!(tokens.len(), 4);
     }
 
     #[test]
@@ -473,6 +501,9 @@ r#""""
         println!("Attempting multiline test");
         let tokens = engine.run().expect("tokens");
         println!("Processor generated {:?} tokens - {:?}", tokens.len(), tokens);
+
+        assert_eq!(tokens.len(), 8);
+
     }
 
 
@@ -484,9 +515,17 @@ r#""""
         let retval = processor.consume_line();
         let tokens = retval.unwrap();
 
-        println!("I got {}, {:?}", tokens.len(), tokens);
+        println!("I got {}", tokens.len());
+        for token in &tokens {
+            println!("{}", token);
+        }
+
         assert_eq!(7, tokens.len());
         assert_eq!(tokens[0].r#type, TType::Indent);
+        let test_types = vec!(TType::Indent, TType::Name, TType::Name, TType::Op, TType::Op, TType::Op);
+        for (idx, test_type) in test_types.iter().enumerate() {
+            assert_eq!(&tokens[idx].r#type, test_type);
+        }
 
     }
 
