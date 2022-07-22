@@ -364,10 +364,12 @@ impl Processor {
 
 
 
-        if has_statenent == true && self.string_continues == false {
-            product.push(Token::Make(TType::Newline, lineno, line.get_idx(), line.get_idx()+1, "\n"));
-        } else {
-            product.push(Token::Make(TType::NL, lineno, line.get_idx(), line.get_idx()+1, "\n"));
+        if self.string_continues == false {
+            if has_statenent == true {
+                product.push(Token::Make(TType::Newline, lineno, line.get_idx(), lineno ,line.get_idx()+1, "\n"));
+            } else {
+                product.push(Token::Make(TType::NL, lineno, line.get_idx(),  lineno,line.get_idx()+1, "\n"));
+            }
         }
 
 
