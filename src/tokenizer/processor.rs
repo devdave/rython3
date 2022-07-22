@@ -146,7 +146,7 @@ impl Processor {
         let mut body: Vec<Token> = Vec::new();
 
         // For now, ALWAYS assume UTF-8 encoding for files.
-        body.push(Token::Make(TType::Encoding, 0, 0, 0, "utf-8"));
+        body.push(Token::Make(TType::Encoding, 0, 0,0, 0, "utf-8"));
 
         // let error: TokError;
 
@@ -187,13 +187,13 @@ impl Processor {
         if self.indent_stack.len() > 0 {
             while self.indent_stack.len() > 0 {
                 self.indent_stack.pop();
-                body.push(Token::Make(TType::Dedent, module_size-1, 0, 0, ""));
+                body.push(Token::Make(TType::Dedent, module_size, 0, module_size, 0, ""));
 
             }
         }
 
         if body.last().unwrap().r#type != TType::EndMarker {
-            body.push(Token::Make(TType::EndMarker, self.module.len()-1, 0, 0, ""));
+            body.push(Token::Make(TType::EndMarker, self.module.len(), 0, self.module.len(),0, ""));
         }
 
 
@@ -218,11 +218,11 @@ impl Processor {
                 if self.indent_stack.len() > 0 {
                     while self.indent_stack.len() > 0 {
                         self.indent_stack.pop();
-                        product.push(Token::Make(TType::Dedent, line.lineno, 0, 0, &line.text[..]));
+                        product.push(Token::Make(TType::Dedent, line.lineno, 0, 0, 0,&line.text[..]));
                     }
                 }
 
-                product.push(Token::Make(TType::NL, line.lineno, 0, 1,"\n"));
+                product.push(Token::Make(TType::NL, line.lineno, 0, line.lineno, 0,"\n"));
 
                 return Ok(product);
             }
@@ -240,13 +240,13 @@ impl Processor {
                             return Err(TokError::TooDeep);
                         }
                         self.indent_stack.push(current_size);
-                        product.push(Token::Make(TType::Indent, line.lineno, 0, current_size, whitespace.as_str()));
+                        product.push(Token::Make(TType::Indent, line.lineno, 0, line.lineno, current_size, whitespace.as_str()));
                     },
                     Ordering::Less => {
                         //We are handling 1 or more dedents
                         while self.indent_stack.len() > 0 {
                             let last_indent_size = self.indent_stack.pop().unwrap();
-                            product.push(Token::Make(TType::Dedent, line.lineno, 0, current_size, ""));
+                            product.push(Token::Make(TType::Dedent, line.lineno, 0, line.lineno, 0, ""));
                             if last_indent_size == current_size {
                                 break;
                             }
@@ -263,7 +263,7 @@ impl Processor {
                 //Handle edge case where dedent has gone all the way to zero
                 while self.indent_stack.len() > 0 {
                     self.indent_stack.pop();
-                    product.push(Token::Make(TType::Dedent, line.lineno, 0, 0, ""));
+                    product.push(Token::Make(TType::Dedent, line.lineno, 0, line.lineno, 0,""));
                 }
             }
 
@@ -281,11 +281,12 @@ impl Processor {
                 if let Some((current_idx, retval)) = line.test_and_return(&triple_quote.to_owned()) {
                     self.string_continue_buffer.push_str(retval);
 
-                    product.push(Token::Make(TType::String, lineno, current_idx, current_idx, self.string_continue_buffer.as_str() ));
+                    product.push(Token::Make(TType::String, self.string_continue_startline, current_idx, current_idx,  0,self.string_continue_buffer.as_str() ));
 
                     //Clean up
                     self.string_continues = false;
                     self.string_continue_buffer = "".to_string();
+                    has_statenent = true;
 
                 } else {
 
@@ -297,7 +298,7 @@ impl Processor {
             }
             //Look for a comment and consume all after it.
             else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\#.*").expect("regex")) {
-                product.push(Token::Make(TType::Comment, lineno, current_idx - &retval.len(), current_idx, &retval));
+                product.push(Token::Make(TType::Comment, lineno, current_idx - &retval.len(), lineno, current_idx, &retval));
             }
             // Look for a operator
             else if let Some((current_idx, retval)) = line.test_and_return(&OPERATOR_RE.to_owned()) {
@@ -324,20 +325,20 @@ impl Processor {
                     }
                 }
 
-                product.push(Token::Make(TType::Op, lineno, current_idx - &retval.len(), current_idx, &retval));
+                product.push(Token::Make(TType::Op, lineno, current_idx - &retval.len(), lineno, current_idx ,&retval));
                 has_statenent = true;
 
 
             }
             // like Regex says, look for non-quoted strings
             else if let Some((current_idx, retval)) = line.test_and_return(&POSSIBLE_NAME.to_owned()) {
-                product.push(Token::Make(TType::Name, lineno, current_idx - retval.len(), current_idx, &retval));
+                product.push(Token::Make(TType::Name, lineno, current_idx - retval.len(), lineno, current_idx, &retval));
                 has_statenent = true;
 
             }
             // look for numbers
             else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\d+").expect("regex")) {
-                product.push(Token::Make(TType::Number, lineno, current_idx - retval.len(), current_idx, &retval));
+                product.push(Token::Make(TType::Number, lineno, current_idx - retval.len(), lineno, current_idx, &retval));
                 has_statenent = true;
             }
             //Absorb  any spaces
