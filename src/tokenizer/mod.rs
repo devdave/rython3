@@ -5,5 +5,6 @@ mod error;
 mod operators;
 mod managed_line;
 mod module_lines;
+mod position;
 
 pub use processor::Processor;

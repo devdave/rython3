@@ -13,6 +13,7 @@ use super::{
     operators::OPERATOR_RE,
     managed_line::ManagedLine,
     module_lines::ModuleLines,
+    position::Position,
 };
 
 use once_cell::sync::Lazy;
