@@ -82,3 +82,62 @@ impl ManagedLine {
         self.idx += amount;
     }
 }
+
+#[cfg(test)]
+mod test {
+
+    use super::ManagedLine;
+    use crate::tokenizer::operators::OPERATOR_RE;
+
+        #[test]
+    fn managed_line_works() {
+        let mut line = ManagedLine::Make(1,"abc".to_string());
+        assert_eq!(line.peek().unwrap(), 'a');
+    }
+
+    #[test]
+    fn managed_line_gets_to_end() {
+        let mut line = ManagedLine::Make(1,"abc".to_string());
+        assert_eq!(line.get().unwrap(), 'a');
+        assert_eq!(line.get().unwrap(), 'b');
+        assert_eq!(line.get().unwrap(), 'c');
+        assert_eq!(line.get(), None);
+    }
+
+    #[test]
+    fn managed_line_goes_back() {
+        let mut line = ManagedLine::Make(1,"abc".to_string());
+        assert_eq!(line.get().unwrap(), 'a');
+        assert_eq!(line.get().unwrap(), 'b');
+        assert_eq!(line.get().unwrap(), 'c');
+        assert_eq!(line.get(), None);
+        line.backup();
+        assert_eq!(line.peek().unwrap(), 'c');
+        assert_eq!(line.get().unwrap(), 'c');
+        assert_eq!(line.get(), None);
+        assert_eq!(line.get(), None);
+    }
+
+    #[test]
+    fn managed_line_swallows_operators() {
+
+        let mut sane = ManagedLine::Make(1,"()[]".to_string());
+        //Somewhat problematic here is the regex is still Lazy<Regex> at this point
+        // so for now primestart it
+        let (_current_idx, retval1) = sane.test_and_return(&OPERATOR_RE.to_owned()).unwrap();
+
+        assert_eq!(retval1.len(), 1);
+        assert_eq!(retval1, "(");
+
+        let (_current_idx, retval2) = sane.test_and_return(&OPERATOR_RE.to_owned()).unwrap();
+        assert_eq!(retval2, ")");
+
+        let (_current_idx, retval3) = sane.test_and_return(&OPERATOR_RE.to_owned()).unwrap();
+        assert_eq!(retval3, "[");
+
+        let (_current_idx, retval4) = sane.test_and_return(&OPERATOR_RE.to_owned()).unwrap();
+        assert_eq!(retval4, "]");
+
+
+    }
+}
