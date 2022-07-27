@@ -182,7 +182,28 @@ impl Processor {
                     panic!("Tokenizer failure: {:?}", issue);
                     // TODO figure out why the borrow checker freaks out on this line
                     // return Err(issue.clone());
+            if self.module.remaining() == 0 && line.len() == 1 {
+                // TODO verifiy line[0] == '\n'
+                if line.peek().expect("Missing last char!") == '\n' {
+                    body.push(Token::Make(TType::EndMarker, Position::m(0, module_size), Position::m(0, module_size), ""));
                 }
+
+            } else {
+                match self.process_line(&mut line) {
+                    Ok(mut product) => {
+                        // So.... yeah, not ideal but I needed a way to duplicate/copy all the elements
+                        // of product so I can append them to body.
+                        // TODO - Refactor so this is less stupid.
+                        body.append(&mut product);
+
+                    },
+                    Err(issue) => {
+                        panic!("Tokenizer failure: {:?}", issue);
+                        // TODO figure out why the borrow checker freaks out on this line
+                        // return Err(issue.clone());
+                    }
+                }
+
             }
 
         } // End While
@@ -454,6 +475,15 @@ mod tests {
 
         assert!(tokens.len() > 1);
         assert_eq!(indents, dedents);
+    }
+
+    #[test]
+    fn processor_correctly_handles_endmarker_vs_nl() {
+        let mut engine = Processor::consume_file("test_fixtures/simple_string.py", Some("_simple_string_".to_string()));
+        let tokens = engine.run().expect("Tokens");
+        print_tokens(&tokens);
+
+        assert_eq!(tokens.len(), 4);
     }
 
     #[test]
