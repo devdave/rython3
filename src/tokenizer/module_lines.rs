@@ -87,3 +87,11 @@ impl Iterator for ModuleLines {
     }
 
 }
+
+
+#[cfg(test)]
+mod test {
+    use super::ModuleLines;
+
+
+}
