@@ -19,12 +19,13 @@ fn main() {
     let mut args = env::args();
     if args.len() == 2 {
         let mut engine = Processor::consume_file(args.nth(1).expect("Expected a file name as argument"), Some("__name__".to_string()));
-        info!("runtime.exe file_to_tokenize.py");
+        println!("Processed {} and now tokenizing", args.nth(1).expect("Expected filename"));
+
         let result = engine.run();
         if let Ok(retval) = result {
             for element in retval.iter() {
 
-                let token_range = format!("{},{}-{},{}:", element.line_start, element.col_start, element.line_end, element.col_end);
+                let token_range = format!("{},{}-{},{}:", element.start.line, element.start.col, element.end.line, element.end.col);
 
                 println!("{:20}  {:15?} '{:15?}'",
                          token_range,
