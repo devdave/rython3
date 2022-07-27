@@ -56,13 +56,14 @@ impl ModuleLines {
 
     }
 
+    pub fn remaining(&self) -> usize {
+        return self.len() - self.idx;
+    }
+
     pub fn len(&self) -> usize {
         self.content.len()
     }
 
-    // pub fn advance_to(&mut self, new_idx: usize) {
-    //     self.idx = new_idx;
-    // }
 
     pub fn advance_one(&mut self) {
         self.idx += 1;
