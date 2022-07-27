@@ -57,7 +57,7 @@ impl ModuleLines {
     }
 
     pub fn remaining(&self) -> usize {
-        return self.len() - self.idx;
+        return self.len().saturating_sub(self.idx);
     }
 
     pub fn len(&self) -> usize {
