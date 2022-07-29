@@ -81,6 +81,12 @@ impl ManagedLine {
     pub fn advance(&mut self, amount: usize) {
         self.idx += amount;
     }
+
+    pub fn return_all(&mut self) -> &str {
+        let remaining = &self.text[self.idx..];
+        self.idx = self.len()+1;
+        return remaining;
+    }
 }
 
 #[cfg(test)]
