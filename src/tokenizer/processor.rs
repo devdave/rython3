@@ -24,7 +24,7 @@ use crate::tokenizer::position::Position;
 // use std::str::Chars;
 
 //Copied from LIBCST
-//TODO relcoate to a common rgxs.rs file?
+//TODO relocate to a common rgxs.rs file?
 const MAX_INDENT: usize = 100;
 // const MAX_CHAR: char = char::MAX;
 // const TAB_SIZE: usize = 8;
@@ -38,7 +38,7 @@ static TRIPLE_QUOTE_AND_CONTENT: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"\A"""[.\n]?"#).expect("regex"));
 
 static TRIPLE_QUOTE_AND_PRECONTENT: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r#"\A[.\n]?""""#).expect("regex"));
+    Lazy::new(|| Regex::new(r#"\A.?""""#).expect("regex"));
 
 
 static SINGLE_QUOTE_STRING: Lazy<Regex> =
@@ -61,7 +61,7 @@ static STRING_PREFIX_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A(?i)(u|[bf]r|r[bf]|r|b|f)").expect("regex"));
 
 static POTENTIAL_IDENTIFIER_TAIL_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\A([a-zA-Z0-9_]|[^\x00-\x7f])+").expect("regex"));
+    Lazy::new(|| Regex::new(r"\A(\w|[^\x00-\x7f])+").expect("regex"));
 static POSSIBLE_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A[a-zA-Z]{1}[\w\d]+").expect("regex"));
 
 
@@ -98,10 +98,10 @@ pub struct Processor {
     /**
     Was the last line an open string or ( or something along those lines?
     */
-    string_is_triple: bool,
+
     string_continues: bool,
-    string_continue_startline: usize,
-    string_continue_buffer: String,
+    string_start: Position,
+    string_buffer_content: String,
 
     pub module: ModuleLines,
 
@@ -117,10 +117,10 @@ impl Processor {
             indent_stack: Vec::new(),
             paren_stack: Vec::new(),
             last_line_was_blank: false,
-            string_is_triple: false,
+
             string_continues: false,
-            string_continue_startline: 0,
-            string_continue_buffer: "".to_string(),
+            string_start: Position::default(),
+            string_buffer_content: "".to_string(),
             module: ModuleLines::Make(lines, name),
         }
     }
@@ -155,24 +155,36 @@ impl Processor {
         return Processor::initialize(input, module_name);
     }
 
-    pub fn run(&mut self) -> Result<Vec<Token>, TokError> {
+    pub fn run(&mut self, skip_encoding: bool) -> Result<Vec<Token>, TokError> {
+
 
         let mut body: Vec<Token> = Vec::new();
 
         // For now, ALWAYS assume UTF-8 encoding for files.
-        body.push(Token::Make(TType::Encoding, Position::m(0,0), Position::m(0,0), "utf-8"));
-
-        // let error: TokError;
+        if skip_encoding == false {
+            body.push(Token::Make(TType::Encoding, Position::m(0,0), Position::m(0,0), "utf-8"));
+        }
 
         let module_size = self.module.len();
 
+
+        debug!("Starting walk/iterate over module");
         while self.module.has_lines() == true {
 
 
 
             let mut line = self.module.get().expect("Expected a line in module");
+            debug!("Processing line: {:?}", line.text);
 
-            if self.module.remaining() == 0 && line.len() == 1 {
+            if self.string_continues == true {
+                debug!("inside of a string, consuming");
+
+                if let Some(token) = self.process_triple_quote(&mut line) {
+                    body.push(token);
+                    self.string_continues = false;
+                }
+            }
+            else if self.module.remaining() == 0 && line.len() == 1 {
                 // TODO verifiy line[0] == '\n'
                 if line.peek().expect("Missing last char!") == '\n' {
                     body.push(Token::Make(TType::EndMarker, Position::m(0, module_size), Position::m(0, module_size), ""));
@@ -201,7 +213,8 @@ impl Processor {
 
         if self.string_continues == true {
             //We are out of lines
-            panic!("Lines exhausted but string not closed!");
+            return Err(TokError::UnterminatedTripleQuotedString);
+            // panic!("Lines exhausted but string not closed!");
         }
 
         if self.paren_stack.len() > 0 {
@@ -372,18 +385,26 @@ impl Processor {
             }
 
             // Seek and then handle """ tokens
-            else if let Some((current_idx, match_str)) = line.test_and_return(&TRIPLE_QUOTE.to_owned()) {
+            else if let Some((current_idx, match_str)) = line.test_and_return(&TRIPLE_QUOTE_AND_CONTENT.to_owned()) {
                 debug!("TQ3 matched on @ {},{}:{:?}", current_idx, lineno, match_str);
 
-                // let result = Processor::process_strings(&mut self.module, false, lineno, current_idx, &match_str);
-               //  match result {
-               //     Ok(result) => {
-               //         product.push(result);
-               //     },
-               //     Err(issue) => {
-               //         return Err(issue);
-               //     }
-               // }
+                self.string_continues = true;
+                self.string_buffer_content = format!("{}", match_str);
+                if let Some((end_idx, end_match_str)) = line.test_and_return(&TRIPLE_QUOTE_AND_PRECONTENT) {
+                    let str_content = format!(r#""""{}"#, end_match_str);
+                    product.push(
+                       Token::Make(
+                           TType::String,
+                           Position::m(current_idx, lineno),
+                           Position::m(end_idx, lineno),
+                           str_content.as_str()
+                       )
+                   );
+                   has_statement = true;
+                } else {
+                    // Consume rest of the line!
+                    self.string_buffer_content = format!("{}{}", self.string_buffer_content, line.return_all()  );
+                }
             }
             //See and handle single quote strings
             else if let Some((current_idx, match_str)) = line.test_and_return(&SINGLE_QUOTE_STRING.to_owned()) {
@@ -429,47 +450,38 @@ impl Processor {
     }
 
     //Assumes that the python string has already started
-    fn process_strings<'a>(module: &'a mut ModuleLines, is_single: bool, starting_line_no: usize, current_idx: usize, matchstr: &'a str) -> Result<Token, TokError<'a>> {
+    fn process_triple_quote(&mut self, line: &mut ManagedLine) -> Option<Token> {
 
-        let mut lineno: usize = starting_line_no;
-        let mut final_idx: usize = current_idx;
-        let mut str_closed = false;
-        let mut buffer = "".to_string();
-        buffer.push_str(matchstr);
 
-        while module.has_lines() == true {
-            let mut line = module.get().expect("New line");
-            lineno = line.lineno;
+        while line.peek() != None {
+            if let Some((new_idx, match_str)) = line.test_and_return(&TRIPLE_QUOTE_AND_PRECONTENT) {
+                debug!("Captured closing 3Q and content {:?}", match_str);
 
-            while line.peek() != None {
-                if let Some((new_idx, new_matchstr)) = line.test_and_return(&SINGLE_QUOTE_STRING_PRECONTENT) {
-                    final_idx = new_idx;
-                    buffer.push_str(new_matchstr);
-                    str_closed = true;
+                self.string_buffer_content = format!("{}{}", self.string_buffer_content, match_str);
 
-                }
-                else {
-                    let chr = line.get().expect("Expected one last char");
-                    buffer.push(chr);
-                }
-            }
+                let str_token = Token::Make(TType::String,
+                                            self.string_start,
+                                            Position::m(new_idx.saturating_sub(match_str.len()), line.lineno),
+                                            self.string_buffer_content.as_str()
+                );
 
-        }
+                return Some(str_token);
+            } else if let Some((new_idx, match_str)) = line.test_and_return(&TRIPLE_QUOTE) {
+                self.string_buffer_content = format!("{}{}", self.string_buffer_content, match_str);
 
-        if str_closed == true {
-            return Ok(Token::Make(
-                TType::String,
-                Position::m(current_idx, starting_line_no),
-                Position::m(final_idx, lineno), buffer.as_str()
-            ));
-        } else {
-            if is_single == true {
-                return Err(TokError::UnterminatedString);
+                let str_token = Token::Make(TType::String,
+                                            self.string_start,
+                                            Position::m(new_idx.saturating_sub(match_str.len()), line.lineno),
+                                            self.string_buffer_content.as_str()
+                );
+                return Some(str_token);
             } else {
-                return Err(TokError::UnterminatedTripleQuotedString);
+                self.string_buffer_content = format!("{}{}", self.string_buffer_content, line.get().unwrap());
             }
-
         }
+
+        return None;
+
 
 
     }
@@ -482,8 +494,8 @@ mod tests {
 
     use crate::Processor;
     // use crate::tokenizer::module_lines::ModuleLines;
-    use crate::tokenizer::operators::OPERATOR_RE;
-    use crate::tokenizer::processor::ManagedLine;
+
+
     use crate::tokenizer::ttype::TType;
     use crate::tokenizer::token::Token;
 
@@ -513,7 +525,7 @@ mod tests {
     #[test]
     fn processor_does_basic_dentation() {
 
-        let tokens = Processor::consume_file("test_fixtures/basic_indent.py", Some("__test__".to_string())).run().expect("Tokens");
+        let tokens = Processor::consume_file("test_fixtures/basic_indent.py", Some("__test__".to_string())).run(false).expect("Tokens");
         assert!(tokens.len() > 1);
         print_tokens(&tokens);
     }
@@ -521,7 +533,7 @@ mod tests {
     #[test]
     fn processor_does_adv_dentation() {
 
-        let tokens = Processor::consume_file("test_fixtures/crazy_dents.py", Some("__test__".to_string())).run().expect("Expected vec<Tokens>");
+        let tokens = Processor::consume_file("test_fixtures/crazy_dents.py", Some("__test__".to_string())).run(false).expect("Expected vec<Tokens>");
         let mut indents = 0;
         let mut dedents = 0;
         for token in tokens.iter() {
@@ -539,7 +551,7 @@ mod tests {
     #[test]
     fn processor_correctly_handles_endmarker_vs_nl() {
         let mut engine = Processor::consume_file("test_fixtures/simple_string.py", Some("_simple_string_".to_string()));
-        let tokens = engine.run().expect("Tokens");
+        let tokens = engine.run(false).expect("Tokens");
         print_tokens(&tokens);
 
         assert_eq!(tokens.len(), 4);
@@ -560,16 +572,13 @@ r#""""
 
 
         let mut engine = Processor::consume_string(data.to_string(), Some("__test__".to_string()));
-        let tokens = engine.run().expect("tokens");
+        let tokens = engine.run(false).expect("tokens");
 
-        println!("Got {} tokens", tokens.len());
-        for token in &tokens {
-            println!("{:?}", token);
-        }
+        print_tokens(&tokens);
 
 
-        assert_eq!(tokens[2].r#type, TType::String);
-        assert_eq!(tokens[2].text, expected);
+        assert_eq!(tokens[3].r#type, TType::String);
+        assert_eq!(tokens[3].text, expected);
 
 
     }
@@ -577,7 +586,7 @@ r#""""
     #[test]
     fn processor_properly_consumes_single_quote_strings_basic() {
         let mut engine = Processor::consume_file("test_fixtures/simple_string.py", Some("_simple_string_".to_string()));
-        let tokens = engine.run().expect("Tokens");
+        let tokens = engine.run(false).expect("Tokens");
         print_tokens(&tokens);
 
         assert_eq!(tokens.len(), 4);
@@ -586,9 +595,13 @@ r#""""
     #[test]
     fn processor_absorbs_multiline_triple_quoted_strings() {
 
+        pretty_env_logger::init();
+
+
+        println!("Loading multiline into processor");
         let mut engine = Processor::consume_file("test_fixtures/multiline_strings.py", Some("__multiline__".to_string()));
-        println!("Attempting multiline test");
-        let tokens = engine.run().expect("tokens");
+
+        let tokens = engine.run(false).expect("tokens");
         print_tokens(&tokens);
 
         assert_eq!(tokens.len(), 8);
