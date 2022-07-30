@@ -431,26 +431,48 @@ impl Processor {
                }
 
             }
+            else if let Some((current_idx, match_str)) = line.test_and_return(&POSSIBLE_NAME) {
+                println!("Found a name {}", match_str);
+                product.push(Token::Make(
+                    TType::Name,
+                    Position::m(current_idx, lineno),
+                    Position::m(current_idx+match_str.len(), lineno),
+                    match_str
+                ));
+
+            }
             else {
                 let chr = line.get().unwrap();
-                error!("Did not capture: {:?} - #{}", chr, lineno);
+
+
+                if chr == '\n' {
+                    let what = if has_statement == true {
+                        TType::Newline
+                    } else {
+                        TType::NL
+                    };
+                    product.push(Token::Make(
+                            what,
+                            Position::m(line.len()-1, lineno),
+                            Position::m(line.len(), lineno),
+                            "\n"
+                        ));
+
+                } else {
+                    error!("Did not capture: {:?} - #{}", chr, lineno);
+                    return Err(TokError::BadCharacter(chr));
+                }
+
+
+
             }
 
         } // end while line peek
 
 
-        let what = if has_statement == true {
-                TType::Newline
-            } else {
-                TType::NL
-            };
 
-        product.push(Token::Make(
-            what,
-            Position::m(line.len()-1, lineno),
-            Position::m(line.len(), lineno),
-            "\n"
-        ));
+
+
 
         Ok(product)
 
