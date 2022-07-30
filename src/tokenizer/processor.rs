@@ -137,6 +137,13 @@ impl Processor {
 
     }
 
+    pub fn tokenize_file<P>(fname: P, module_name: Option<&str>, skip_encoding: bool) -> Vec<Token>
+        where P: AsRef<std::path::Path>,    {
+        let mut engine = Processor::consume_file(fname, Some(module_name.unwrap().to_string()));
+        return engine.run(skip_encoding).expect("tokens");
+
+    }
+
     pub fn consume_string(input: String, module_name: Option<String>) -> Self {
         let product = if input.contains("\r\n") {
             input.split("\r\n")
