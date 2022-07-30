@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Formatter};
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Position {
     pub col: usize,
     pub line: usize,
@@ -11,6 +11,13 @@ impl Position {
         Self {
             col,
             line,
+        }
+    }
+
+    pub fn t((col, line): (usize, usize)) -> Self {
+        Self {
+            col,
+            line
         }
     }
 }
