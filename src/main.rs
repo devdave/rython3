@@ -5,7 +5,8 @@ extern crate pretty_env_logger;
 
 mod tokenizer;
 use std::{env};
-use log::{debug, error, info};
+
+// use log::{debug, error, info};
 
 
 use tokenizer::Processor;
@@ -18,10 +19,12 @@ fn main() {
 
     let mut args = env::args();
     if args.len() == 2 {
-        let mut engine = Processor::consume_file(args.nth(1).expect("Expected a file name as argument"), Some("__name__".to_string()));
-        println!("Processed {} and now tokenizing", args.nth(1).expect("Expected filename"));
+        let fname = args.nth(1).expect("Expected a filename");
 
-        let result = engine.run();
+        println!("Processed {} and now tokenizing", fname);
+        let mut engine = Processor::consume_file(fname, Some("__name__".to_string()));
+
+        let result = engine.run(false);
         if let Ok(retval) = result {
             for element in retval.iter() {
 
