@@ -601,8 +601,8 @@ mod tests {
         print_tokens(&tokens);
 
 
-        assert_eq!(tokens[3].r#type, TType::String);
-        assert_eq!(tokens[3].text, expected);
+        assert_eq!(tokens[2].r#type, TType::String);
+        assert_eq!(tokens[2].text, expected);
     }
 
     #[test]
@@ -625,7 +625,7 @@ mod tests {
         let tokens = engine.run(false).expect("tokens");
         print_tokens(&tokens);
 
-        assert_eq!(tokens.len(), 8);
+        assert_eq!(tokens.len(), 6);
     }
 
 
@@ -638,13 +638,12 @@ mod tests {
         let retval = processor.process_line(&mut line);
         let tokens = retval.unwrap();
 
-        println!("I got {}", tokens.len());
-        for token in &tokens {
-            println!("{}", token);
-        }
+        print_tokens(&tokens);
 
-        assert_eq!(7, tokens.len());
+        assert_eq!(6, tokens.len());
         assert_eq!(tokens[0].r#type, TType::Indent);
+        assert_eq!(tokens[1].r#type, TType::Name);
+        assert_eq!(tokens[2].r#type, TType::Name);
         let test_types = vec!(TType::Indent, TType::Name, TType::Name, TType::Op, TType::Op, TType::Op);
         for (idx, test_type) in test_types.iter().enumerate() {
             assert_eq!(&tokens[idx].r#type, test_type);
@@ -654,7 +653,9 @@ mod tests {
 
     #[test]
     fn test_additive() {
+
         let tokens = Processor::tokenize_file("test_fixtures/test_additive.py", Some("additive"), true);
+        print_tokens(&tokens);
     }
 
     #[test]
