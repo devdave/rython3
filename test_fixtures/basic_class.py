@@ -8,7 +8,7 @@ class Basic:
         """
         A basic init
         """
-        c = 0
+        self.c = 0
 
     def add(self, a, b):
         self.c = a + b
