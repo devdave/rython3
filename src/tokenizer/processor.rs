@@ -498,7 +498,6 @@ impl Processor {
 
 #[cfg(test)]
 mod tests {
-
     use crate::Processor;
     // use crate::tokenizer::module_lines::ModuleLines;
 
@@ -519,19 +518,16 @@ mod tests {
         let mut actual = "".to_string();
         actual.push('\n');
         assert_eq!(actual, "\n");
-
     }
 
 
     #[test]
     fn processor_works() {
         Processor::consume_string("Hello\nWorld".to_string(), Some("__test__".to_string()));
-
     }
 
     #[test]
     fn processor_does_basic_dentation() {
-
         let tokens = Processor::consume_file("test_fixtures/basic_indent.py", Some("__test__".to_string())).run(false).expect("Tokens");
         assert!(tokens.len() > 1);
         print_tokens(&tokens);
@@ -539,7 +535,6 @@ mod tests {
 
     #[test]
     fn processor_does_adv_dentation() {
-
         let tokens = Processor::consume_file("test_fixtures/crazy_dents.py", Some("__test__".to_string())).run(false).expect("Expected vec<Tokens>");
         let mut indents = 0;
         let mut dedents = 0;
@@ -565,15 +560,15 @@ mod tests {
     }
 
     #[test]
-    fn processor_consumes_triple_strings_v2 () {
+    fn processor_consumes_triple_strings_v2() {
         let data =
-r#"
+            r#"
 """
     This is a test!
 """
 "#;
         let expected =
-r#""""
+            r#""""
     This is a test!
 """"#;
 
@@ -586,8 +581,6 @@ r#""""
 
         assert_eq!(tokens[3].r#type, TType::String);
         assert_eq!(tokens[3].text, expected);
-
-
     }
 
     #[test]
@@ -601,7 +594,6 @@ r#""""
 
     #[test]
     fn processor_absorbs_multiline_triple_quoted_strings() {
-
         pretty_env_logger::init();
 
 
@@ -612,13 +604,11 @@ r#""""
         print_tokens(&tokens);
 
         assert_eq!(tokens.len(), 8);
-
     }
 
 
     #[test]
     fn processor_consume_handles_names() {
-
         let mut processor = Processor::initialize(vec!["    def hello_world():".to_string()], Some("__test__".to_string()));
 
         let mut line = processor.module.get().expect("Atleast one line");
@@ -637,8 +627,72 @@ r#""""
         for (idx, test_type) in test_types.iter().enumerate() {
             assert_eq!(&tokens[idx].r#type, test_type);
         }
-
     }
 
 
+    #[test]
+    fn test_additive() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_additive.py", Some("additive"), true);
+    }
+
+    #[test]
+    fn test_async() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_async.py", Some("test_async"), true);
+    }
+
+    #[test]
+    fn test_comparison() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_comparison.py", Some("test_comparison"), true);
+    }
+
+    #[test]
+    fn test_float() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_float.py", Some("test_float"), true);
+    }
+
+    #[test]
+    fn test_function() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_function.py", Some("test_function"), true);
+    }
+
+    #[test]
+    fn test_int() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_int.py", Some("test_int"), true);
+    }
+
+    #[test]
+    fn test_long() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_long.py", Some("test_long"), true);
+    }
+
+    #[test]
+    fn test_method() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_method.py", Some("test_method"), true);
+    }
+
+    #[test]
+    fn test_multiplicative() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_multiplicative.py", Some("test_multiplicative"), true );
+    }
+
+    #[test]
+    fn test_selector() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_selector.py", Some("test_selector"), true);
+    }
+
+    #[test]
+    fn test_shift() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_shift.py", Some("test_shift"), true);
+    }
+
+    #[test]
+    fn test_string() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_string.py", Some("test_string"), true);
+
+    }
+
+    #[test]
+    fn test_unary() {
+        let tokens = Processor::tokenize_file("test_fixtures/test_unary.py", Some("test_unary"), true);
+    }
 }
