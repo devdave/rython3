@@ -21,6 +21,15 @@ impl Token {
             text: content.to_string(),
         }
     }
+
+    pub fn quick(ttype: TType, start: (usize, usize), end: (usize, usize), content: String) -> Self {
+        Self {
+            r#type: ttype,
+            start: Position::t(start),
+            end: Position::t(end),
+            text: content,
+        }
+    }
 }
 
 impl Debug for Token {
@@ -44,4 +53,14 @@ impl Display for Token {
             .finish()
     }
 
+}
+
+impl PartialEq for Token {
+    fn eq(&self, other: &Self) -> bool {
+        return self.r#type == other.r#type && self.text == other.text;
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        return self.r#type != other.r#type || self.text != other.text;
+    }
 }
