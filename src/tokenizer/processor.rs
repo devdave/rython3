@@ -654,6 +654,13 @@ mod tests {
     use crate::tokenizer::ttype::TType;
     use crate::tokenizer::token::Token;
 
+    macro_rules! test_token{
+        ($token:expr, $ttype:expr, $content:expr)=>{
+            assert_eq!($token.r#type, $ttype);
+            assert_eq!($token.text, $content)
+        }
+    }
+
 
     fn print_tokens(tokens: &Vec<Token>) {
         println!("Got {} tokens", tokens.len());
@@ -827,12 +834,17 @@ mod tests {
 
     #[test]
     fn test_selector() {
+        //import sys, time
+        // x = sys.modules['time'].time()
+
         let tokens = Processor::tokenize_file("test_fixtures/test_selector.py", Some("test_selector"), true);
         print_tokens(&tokens);
 
-        assert_eq!(tokens[0].r#type, TType::Name);
-        assert_eq!(tokens[1].r#type, TType::Name);
-        assert_eq!(tokens[1].text, "sys");
+        test_token!(tokens[0], TType::Name, "import");
+        test_token!(tokens[1], TType::Name, "sys");
+        test_token!(tokens[2], TType::Op, ",");
+        test_token!(tokens[3], TType::Name, "time");
+
 
         assert_eq!(tokens.len(), 19);
     }
