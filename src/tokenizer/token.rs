@@ -22,12 +22,12 @@ impl Token {
         }
     }
 
-    pub fn quick(ttype: TType, start: (usize, usize), end: (usize, usize), content: String) -> Self {
+    pub fn quick(ttype: TType, line_no:usize, start_col:usize, end_col:usize, content: &str) -> Self {
         Self {
             r#type: ttype,
-            start: Position::t(start),
-            end: Position::t(end),
-            text: content,
+            start: Position::t((start_col, line_no)),
+            end: Position::t((end_col, line_no)),
+            text: content.to_string(),
         }
     }
 }
