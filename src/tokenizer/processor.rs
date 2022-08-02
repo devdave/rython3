@@ -410,7 +410,7 @@ impl Processor {
                 continue;
             }
             //Look for a comment and consume all after it.
-            if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A#.*").expect("regex")) {
+            else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A#.*").expect("regex")) {
                 product.push(
                     Token::Make(TType::Comment,
                                 Position::m( current_idx, lineno),
@@ -470,7 +470,7 @@ impl Processor {
             }
             //Absorb  any spaces
             else if let Some((_current_idx, _retval)) = line.test_and_return(&SPACE_TAB_FORMFEED_RE.to_owned()) {
-                // pass/ignore WS - TODO REFACTOR!
+            // pass/ignore WS - TODO REFACTOR!
             } else if Some('\\') == line.peek() {
 
                 println!("TODO, deal with line continutations!");
@@ -479,11 +479,14 @@ impl Processor {
             }
 
             // Seek and then handle """ tokens
-            else if let Some((current_idx, match_str)) = line.test_and_return(&TRIPLE_QUOTE_AND_CONTENT.to_owned()) {
+            else if let Some((current_idx, match_str)) = line.test_and_return(&TRIPLE_QUOTE.to_owned()) {
                 debug!("TQ3 matched on @ {},{}:{:?}", current_idx, lineno, match_str);
 
                 self.string_continues = true;
+                self.string_type = StringType::TRIPLE;
                 self.string_buffer_content = format!("{}", match_str);
+                self.string_start = Position::m(current_idx, lineno);
+
                 if let Some((end_idx, end_match_str)) = line.test_and_return(&TRIPLE_QUOTE_AND_PRECONTENT) {
                     let str_content = format!(r#""""{}"#, end_match_str);
                     product.push(
@@ -500,24 +503,34 @@ impl Processor {
                     self.string_buffer_content = format!("{}{}", self.string_buffer_content, line.return_all()  );
                 }
             }
-            //See and handle single quote strings
-            else if let Some((current_idx, match_str)) = line.test_and_return(&SINGLE_QUOTE_STRING.to_owned()) {
-               println!("SQ matched @ {}:{} {:?}", lineno, current_idx, match_str);
-               if let Some((end_idx, end_match_str)) = line.test_and_return(&SINGLE_QUOTE_STRING_PRECONTENT) {
-                   println!("I found the end of the string - {}", end_match_str);
-                   let str_content = format!(r#""{}"#, end_match_str);
-                   product.push(
-                       Token::Make(
-                           TType::String,
-                           Position::m(current_idx, lineno),
-                           Position::m(end_idx, lineno),
-                           str_content.as_str()
-                       )
-                   );
-                   has_statement = true;
-               }
 
-            }
+            //See and handle single `"` quote strings
+            // else if let Some((current_idx, match_str)) = line.test_and_return(&SINGLE_QUOTE_STRING.to_owned()) {
+            //    println!("SQ matched @ {}:{} {:?}", lineno, current_idx, match_str);
+            //    if let Some((end_idx, end_match_str)) = line.test_and_return(&SINGLE_QUOTE_STRING_PRECONTENT) {
+            //        println!("I found the end of the string - {}", end_match_str);
+            //        let str_content = format!(r#""{}"#, end_match_str);
+            //        product.push(
+            //            Token::Make(
+            //                TType::String,
+            //                Position::m(current_idx, lineno),
+            //                Position::m(end_idx, lineno),
+            //                str_content.as_str()
+            //            )
+            //        );
+            //        has_statement = true;
+            //    }
+            // }
+            // Try and catch `'` strings
+            // else if let Some((current_idx, match_str)) = line.test_and_return(&SINGLE_APOSTROPHE_STRING.to_owned()) {
+            //     println!("Single Q matched @ {}:{} {:?}", lineno, current_idx, match_str);
+            //     self.string_continues = true;
+            //     self.string_buffer_content = match_str.to_string();
+            //     self.string_type = StringType::SINGLE;
+            //     has_statement = true;
+            //
+            // }
+            //Ooops, doubled up searching for Name tokens
             else if let Some((current_idx, match_str)) = line.test_and_return(&POSSIBLE_NAME) {
                 println!("Found a name {}", match_str);
                 product.push(Token::Make(
@@ -527,6 +540,32 @@ impl Processor {
                     match_str
                 ));
 
+            }
+            else if let Some((current_idx, match_str)) = line.test_and_return(&POSSIBLE_ONE_CHAR_NAME) {
+                //TODO peak for " or '
+                product.push(Token::Make(
+                    TType::Name,
+                    Position::m(current_idx, lineno),
+                    Position::m(current_idx+match_str.len(), lineno),
+                    match_str
+                ));
+            }
+            else if let Some((current_idx, match_str)) = line.test_and_return(&CAPTURE_APOS_STRING) {
+                product.push(Token::Make(
+                    TType::String,
+                    Position::m(current_idx, lineno),
+                    Position::m(current_idx.saturating_add(match_str.len()), lineno),
+                    match_str
+                ));
+
+            }
+            else if let Some((current_idx, match_str)) = line.test_and_return( &CAPTURE_QUOTE_STRING) {
+                product.push(Token::Make(
+                    TType::String,
+                    Position::m(current_idx, lineno),
+                    Position::m(current_idx.saturating_add(match_str.len()), lineno),
+                    match_str
+                ));
             }
             else {
                 let chr = line.get().unwrap();
