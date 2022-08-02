@@ -214,13 +214,12 @@ impl Processor {
                         self.string_continues = false;
                     }
                 }
-                //" and ' should have closed on the same line
 
             }
             else if self.module.remaining() == 0 && line.len() == 1 {
                 // TODO verifiy line[0] == '\n'
                 if line.peek().expect("Missing last char!") == '\n' {
-                    body.push(Token::Make(TType::EndMarker, Position::m(0, module_size), Position::m(0, module_size), ""));
+                    body.push(Token::quick(TType::EndMarker, module_size, 0, 0, ""));
                 }
 
             }
@@ -252,7 +251,6 @@ impl Processor {
         if self.string_continues == true {
             //We are out of lines
             return Err(TokError::UnterminatedTripleQuotedString);
-            // panic!("Lines exhausted but string not closed!");
         }
 
         if self.paren_stack.len() > 0 {
@@ -263,21 +261,17 @@ impl Processor {
         if self.indent_stack.len() > 0 {
             while self.indent_stack.len() > 0 {
                 self.indent_stack.pop();
-                body.push(Token::Make(TType::Dedent, Position::m(0, module_size), Position::m(0, module_size),""));
+                body.push(Token::quick(TType::Dedent, module_size, 0, 0, ""));
 
             }
         }
 
         if body.last().unwrap().r#type != TType::EndMarker {
-            body.push(Token::Make(TType::EndMarker, Position::m(0, module_size), Position::m(0, module_size), ""));
+            body.push(Token::quick(TType::EndMarker, module_size, 0, 0, ""));
         }
 
 
         return Ok(body);
-    }
-
-    fn add_paren(&mut self, paren: char, lineno: usize) {
-        self.paren_stack.push((paren, lineno));
     }
 
     fn process_line(&mut self, line: &mut ManagedLine) -> Result<Vec<Token>, TokError> {
@@ -412,10 +406,8 @@ impl Processor {
             //Look for a comment and consume all after it.
             else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A#.*").expect("regex")) {
                 product.push(
-                    Token::Make(TType::Comment,
-                                Position::m( current_idx, lineno),
-                                Position::m(retval.len()+current_idx, lineno),
-                                &retval));
+                            Token::quick(TType::Comment, lineno, current_idx, current_idx+retval.len(), retval)
+                );
             }
             // Look for a operator
             else if let Some((current_idx, retval)) = line.test_and_return(&OPERATOR_RE.to_owned()) {
@@ -795,6 +787,10 @@ mod tests {
     #[test]
     fn test_async() {
         let tokens = Processor::tokenize_file("test_fixtures/test_async.py", Some("test_async"), true);
+        print_tokens(&tokens);
+
+        assert_eq!(tokens.len(), 60);
+        //fuckkkkkkkk me that's a lot of data to double check
     }
 
     #[test]
