@@ -728,13 +728,13 @@ mod tests {
         print_tokens(&tokens);
 
 
-        assert_eq!(tokens[2].r#type, TType::String);
-        assert_eq!(tokens[2].text, expected);
+        assert_eq!(tokens[1].r#type, TType::String);
+        assert_eq!(tokens[1].text, expected);
     }
 
     #[test]
     fn processor_properly_consumes_single_quote_strings_basic() {
-        let mut engine = Processor::consume_file("test_fixtures/simple_string.py", Some("_simple_string_".to_string()));
+        let mut engine = Processor::consume_file("test_fixtures/simple_string.py", Some("simple_string".to_string()));
         let tokens = engine.run(false).expect("Tokens");
         print_tokens(&tokens);
 
@@ -747,12 +747,12 @@ mod tests {
 
 
         println!("Loading multiline into processor");
-        let mut engine = Processor::consume_file("test_fixtures/multiline_strings.py", Some("__multiline__".to_string()));
 
-        let tokens = engine.run(false).expect("tokens");
+        let tokens = Processor::tokenize_file("test_fixtures/multiline_strings.py", Some("multiline"), true);
         print_tokens(&tokens);
 
-        assert_eq!(tokens.len(), 6);
+        assert_eq!(tokens.len(), 3);
+
     }
 
 
@@ -828,6 +828,13 @@ mod tests {
     #[test]
     fn test_selector() {
         let tokens = Processor::tokenize_file("test_fixtures/test_selector.py", Some("test_selector"), true);
+        print_tokens(&tokens);
+
+        assert_eq!(tokens[0].r#type, TType::Name);
+        assert_eq!(tokens[1].r#type, TType::Name);
+        assert_eq!(tokens[1].text, "sys");
+
+        assert_eq!(tokens.len(), 19);
     }
 
     #[test]
