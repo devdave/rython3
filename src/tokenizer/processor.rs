@@ -75,6 +75,15 @@ static STRING_PREFIX_RE: Lazy<Regex> =
 static POTENTIAL_IDENTIFIER_TAIL_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A(\w|[^\x00-\x7f])+").expect("regex"));
 static POSSIBLE_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A[a-zA-Z]{1}[\w\d]+").expect("regex"));
+static POSSIBLE_ONE_CHAR_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A[a-zA-Z]{1}").expect("regex"));
+
+#[derive(PartialEq, Debug)]
+enum StringType {
+    NONE,
+    SINGLE,
+    DOUBLE,
+    TRIPLE,
+}
 
 
 #[cfg(target_os = "macos")]
@@ -112,6 +121,7 @@ pub struct Processor {
     */
 
     string_continues: bool,
+    string_type: StringType,
     string_start: Position,
     string_buffer_content: String,
 
@@ -131,6 +141,7 @@ impl Processor {
             last_line_was_blank: false,
 
             string_continues: false,
+            string_type: StringType::NONE,
             string_start: Position::default(),
             string_buffer_content: "".to_string(),
             module: ModuleLines::Make(lines, name),
@@ -197,11 +208,14 @@ impl Processor {
 
             if self.string_continues == true {
                 debug!("inside of a string, consuming");
-
-                if let Some(token) = self.process_triple_quote(&mut line) {
-                    body.push(token);
-                    self.string_continues = false;
+                if self.string_type == StringType::TRIPLE {
+                    if let Some(token) = self.process_triple_quote(&mut line) {
+                        body.push(token);
+                        self.string_continues = false;
+                    }
                 }
+                //" and ' should have closed on the same line
+
             }
             else if self.module.remaining() == 0 && line.len() == 1 {
                 // TODO verifiy line[0] == '\n'
