@@ -351,6 +351,64 @@ impl Processor {
 
         while line.peek() != None {
 
+
+
+            //We're continuing to consume a string, like a `'` or `"` but it could also be a `"""`
+            if self.string_continues == true {
+
+                match self.string_type {
+                    StringType::SINGLE => {
+                        if let Some((current_idx, match_str)) = line.test_and_return(&SINGLE_APOSTROPHE_PRECONTENT){
+                            self.string_buffer_content.push_str(match_str);
+                            product.push(Token::Make(
+                                TType::String,
+                                self.string_start,
+                                Position::t((current_idx, lineno)),
+                                self.string_buffer_content.as_str()
+                            ));
+                            self.string_continues = false;
+                        } else {
+                            return Err(TokError::UnterminatedString);
+                        }
+                    },
+                    StringType::DOUBLE => {
+                        if let Some((current_idx, match_str)) = line.test_and_return(&SINGLE_QUOTE_STRING_PRECONTENT) {
+                            self.string_buffer_content.push_str(match_str);
+                            product.push(Token::Make(
+                                TType::String,
+                                self.string_start,
+                                Position::t((current_idx, lineno)),
+                                self.string_buffer_content.as_str()
+                            ));
+                            self.string_continues = false;
+                        } else {
+                            return Err(TokError::UnterminatedString);
+                        }
+                    },
+                    StringType::TRIPLE => {
+                        if let Some((current_idx, match_str)) = line.test_and_return(&TRIPLE_QUOTE_AND_PRECONTENT) {
+                            self.string_buffer_content.push_str(match_str);
+                            product.push(Token::Make(
+                                TType::String,
+                                self.string_start,
+                                Position::t((current_idx, lineno)),
+                                self.string_buffer_content.as_str()
+                            ));
+                            self.string_continues = false;
+                            has_statement = true;
+                        } else {
+                            //Consume the whole line from current idx
+                            self.string_buffer_content = format!("{}{}", self.string_buffer_content, line.return_all() );
+                            return Ok(product);
+                        }
+                    },
+                    _ => {
+                        println!("How did i get here? {:?}", self.string_type);
+                    }
+                }
+
+                continue;
+            }
             //Look for a comment and consume all after it.
             if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A#.*").expect("regex")) {
                 product.push(
