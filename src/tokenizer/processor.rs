@@ -585,8 +585,9 @@ impl Processor {
                         ));
 
                 } else {
-                    error!("Did not capture: {:?} - #{}", chr, lineno);
-                    return Err(TokError::BadCharacter(chr));
+                    println!("Did not capture: {:?} - #{}:{}", chr, lineno, line.idx);
+
+                    return Err(TokError::BadCharacter(chr) );
                 }
 
 
