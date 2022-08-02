@@ -223,7 +223,12 @@ impl Processor {
                     body.push(Token::Make(TType::EndMarker, Position::m(0, module_size), Position::m(0, module_size), ""));
                 }
 
-            } else {
+            }
+            else if line.len() == 1 && line.peek().expect("last char") == '\n' {
+                //Blank lines don't exist and don't have NEWLINE or NL endings
+                continue;
+            }
+            else {
                 match self.process_line(&mut line) {
                     Ok(mut product) => {
                         // So.... yeah, not ideal but I needed a way to duplicate/copy all the elements
