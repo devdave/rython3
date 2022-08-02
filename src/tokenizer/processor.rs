@@ -290,9 +290,7 @@ impl Processor {
 
         if self.string_continues == false {
         //Deal with empty lines first
-            if line.text.len() == 0 || line.text == "" {
-                // Assume ALL NL and Newlines are \n and not \r or \r\n - *nix or gtfo.
-
+            if line.text.len() == 1 || line.text == "\n" {
 
                 if self.indent_stack.len() > 0 {
                     while self.indent_stack.len() > 0 {
