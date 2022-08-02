@@ -41,6 +41,12 @@ static TRIPLE_QUOTE_AND_PRECONTENT: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"\A.?""""#).expect("regex"));
 
 
+static CAPTURE_QUOTE_STRING: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"\A"[^\n"\\]*(?:\\.[^\n"\\]*)*""#).expect("regex"));
+
+static CAPTURE_APOS_STRING: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"\A'[^\n'\\]*(?:\\.[^\n'\\]*)*'"#).expect("regex"));
+
 static SINGLE_QUOTE_STRING: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"\A""#).expect("regex"));
 
@@ -49,6 +55,12 @@ static SINGLE_QUOTE_STRING_CONTENT: Lazy<Regex> =
 
 static SINGLE_QUOTE_STRING_PRECONTENT: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"\A[^"]+""#).expect("regex"));
+
+static SINGLE_APOSTROPHE_STRING: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"\A'"#).expect("regex"));
+
+static SINGLE_APOSTROPHE_PRECONTENT: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"\A[^']?'"#).expect("regex"));
 
 
 static SPACE_TAB_FORMFEED_RE: Lazy<Regex> =
