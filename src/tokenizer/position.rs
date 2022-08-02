@@ -9,16 +9,13 @@ pub struct Position {
 impl Position {
     pub fn m(col: usize, line: usize) -> Self{
         Self {
-            col,
-            line,
+            col:col,
+            line:line.saturating_add(1),
         }
     }
 
     pub fn t((col, line): (usize, usize)) -> Self {
-        Self {
-            col,
-            line
-        }
+        Self::m(col, line)
     }
 }
 
