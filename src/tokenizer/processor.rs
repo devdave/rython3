@@ -78,6 +78,15 @@ static POTENTIAL_IDENTIFIER_TAIL_RE: Lazy<Regex> =
 static POSSIBLE_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A[a-zA-Z]{1}[\w\d]+").expect("regex"));
 static POSSIBLE_ONE_CHAR_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A[a-zA-Z]{1}").expect("regex"));
 
+static HEXNUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A0[xX](?:_?[0-9a-fA-F])+").expect("regex"));
+
+static BINNUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A0[bB](?:_?[01])+").expect("regex"));
+
+static OCTNUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A0[oO](?:_?[0-7])+").expect("regex"));
+
+static DECNUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A(?:0(?:_?0)*|[1-9](?:_?[0-9])*)").expect("regex"));
+
+
 #[derive(PartialEq, Debug)]
 enum StringType {
     NONE,
