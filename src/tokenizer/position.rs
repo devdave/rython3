@@ -19,6 +19,18 @@ impl Position {
     }
 }
 
+impl PartialEq for Position {
+    fn eq(&self, other: &Self) -> bool {
+        self.line == other.line && self.col == other.col
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        self.line != other.line || self.col != other.col
+    }
+
+
+}
+
 impl Debug for Position {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Position")
