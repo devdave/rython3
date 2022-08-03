@@ -453,7 +453,37 @@ impl Processor {
             // like Regex says, look for non-quoted strings
             else if let Some((current_idx, retval)) = line.test_and_return(&POSSIBLE_NAME.to_owned()) {
                 product.push(
-                         Token::quick(TType::Name, lineno, current_idx, current_idx.add(retval.len()), retval)
+                         Token::quick(TType::Name, lineno, index, current_idx, retval)
+                    );
+                has_statement = true;
+            }
+            //Hex number
+            else if let Some((current_idx, retval)) = line.test_and_return(&HEXNUMBER) {
+                product.push(
+                        Token::quick(TType::Number, lineno, index, current_idx, retval)
+                    );
+                has_statement = true;
+            }
+            //Binary number
+            else if let Some((current_idx, retval)) = line.test_and_return(&BINNUMBER) {
+                product.push(
+                        Token::quick(TType::Number, lineno, index, current_idx, retval)
+                    );
+                has_statement = true;
+            }
+            //Octal number
+            else if let Some((current_idx, retval)) = line.test_and_return(&OCTNUMBER) {
+                product.push(
+                        Token::quick(TType::Number, lineno, index, current_idx, retval)
+                    );
+                has_statement = true;
+            }
+
+
+            //Declarative number (has _'s)
+            else if let Some((current_idx, retval)) = line.test_and_return(&DECNUMBER) {
+                product.push(
+                        Token::quick(TType::Number, lineno, index, current_idx, retval)
                     );
                 has_statement = true;
             }
