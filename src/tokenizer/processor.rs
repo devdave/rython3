@@ -281,7 +281,7 @@ impl Processor {
         let mut product: Vec<Token> = Vec::new();
         let mut has_statement = false;
 
-        let lineno = line.lineno;
+        let lineno = line.lineno.saturating_add(1);
 
         if self.string_continues == false {
         //Deal with empty lines first
