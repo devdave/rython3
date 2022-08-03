@@ -846,7 +846,17 @@ mod tests {
 
     #[test]
     fn test_shift() {
-        let tokens = Processor::tokenize_file("test_fixtures/test_shift.py", Some("test_shift"), true);
+        let tokens = Processor::tokenize_file("test_fixtures/test_shift.py", Some("test_shift"), false);
+        test_token_w_position!(tokens[0], TType::Encoding, (0, 0), (0, 0), "utf-8" );
+        test_token_w_position!(tokens[1], TType::Name, (0, 1), (1, 1), "x" );
+        test_token_w_position!(tokens[2], TType::Op, (2, 1), (3, 1), "=" );
+        test_token_w_position!(tokens[3], TType::Number, (4, 1), (5, 1), "1" );
+        test_token_w_position!(tokens[4], TType::Op, (6, 1), (8, 1), "<<" );
+        test_token_w_position!(tokens[5], TType::Number, (9, 1), (10, 1), "1" );
+        test_token_w_position!(tokens[6], TType::Op, (11, 1), (13, 1), ">>" );
+        test_token_w_position!(tokens[7], TType::Number, (14, 1), (15, 1), "5" );
+        test_token_w_position!(tokens[8], TType::Newline, (15, 1), (17, 1), "\n" );
+        test_token_w_position!(tokens[9], TType::EndMarker, (0, 2), (0, 2), "" );
     }
 
     #[test]
