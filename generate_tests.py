@@ -11,9 +11,9 @@ def token_type_from_python_to_rust(typefield):
         case token.STRING:
             return "TType::String"
         case token.NAME:
-            return "TType:Name"
+            return "TType::Name"
         case token.OP:
-            return "TType:Op"
+            return "TType::Op"
         case token.NEWLINE:
             return "TType::Newline"
         case token.NUMBER:
@@ -23,12 +23,12 @@ def token_type_from_python_to_rust(typefield):
         case token.DEDENT:
             return "TType::Dedent"
         case token.ENDMARKER:
-            return "TType::Endmarker"
+            return "TType::EndMarker"
         case token.NL:
             return "TType::NL"
-        
+
         case default:
-            return f"Not handled yet {typefield}"
+            raise ValueError("Not handled yet")
 
 
 
@@ -42,10 +42,12 @@ def walk_workingpath(work_path:Path):
                 try:
                     tokens = tokenize(my_file.readline)
                     for idx, token in enumerate(tokens):
-                        print(token)
-                        print(f"test_token!(tokens[{idx}], {token_type_from_python_to_rust(token.type)}, \"{token.string}\" );")
+
+                        positions = f"({token.start[1]}, {token.start[0]}), ({token.end[1]}, {token.end[0]})"
+                        ttype = f"{token_type_from_python_to_rust(token.type)}"
+                        print(f"test_token_w_position!(tokens[{idx}], {ttype}, {positions}, \"{token.string}\" );")
                 except Exception as exc:
-                    print("Failed to tokenize because {exc}")
+                    print(f"Failed to tokenize because {exc}")
 
                 print("Finished\n")
 
