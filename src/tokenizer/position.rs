@@ -34,8 +34,8 @@ impl PartialEq for Position {
 impl Debug for Position {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Position")
-            .field("line", &self.line)
             .field("col", &self.col)
+            .field("line", &self.line)
             .finish()
     }
 }
