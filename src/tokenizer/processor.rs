@@ -18,6 +18,7 @@ use super::{
 use once_cell::sync::Lazy;
 use regex::{Regex};
 use std::io::{Read};
+use std::ops::Add;
 use log::{error, info};
 use crate::tokenizer::position::Position;
 
@@ -436,28 +437,22 @@ impl Processor {
                 }
 
                 product.push(
-                    Token::Make(TType::Op,
-                                Position::m(current_idx, lineno),
-                                Position::m(current_idx+retval.len(), lineno),
-                                &retval));
+                            Token::quick(TType::Op, lineno, current_idx, current_idx+retval.len(), retval)
+                    );
                 has_statement = true;
             }
             // like Regex says, look for non-quoted strings
             else if let Some((current_idx, retval)) = line.test_and_return(&POSSIBLE_NAME.to_owned()) {
                 product.push(
-                    Token::Make(TType::Name,
-                                Position::m(current_idx, lineno),
-                                Position::m(current_idx+retval.len(), lineno),
-                                &retval));
+                         Token::quick(TType::Name, lineno, current_idx, current_idx.add(retval.len()), retval)
+                    );
                 has_statement = true;
             }
             // look for numbers
             else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\d+").expect("regex")) {
                 product.push(
-                    Token::Make(TType::Number,
-                                Position::m(current_idx, lineno),
-                                Position::m(current_idx+retval.len(), lineno),
-                                &retval));
+                        Token::quick(TType::Number, lineno, current_idx, current_idx+retval.len(), retval)
+                    );
                 has_statement = true;
             }
             //Absorb  any spaces
@@ -482,13 +477,8 @@ impl Processor {
                 if let Some((end_idx, end_match_str)) = line.test_and_return(&TRIPLE_QUOTE_AND_PRECONTENT) {
                     let str_content = format!(r#""""{}"#, end_match_str);
                     product.push(
-                       Token::Make(
-                           TType::String,
-                           Position::m(current_idx, lineno),
-                           Position::m(end_idx, lineno),
-                           str_content.as_str()
-                       )
-                   );
+                            Token::quick(TType::String, lineno, current_idx, end_idx, str_content.as_str())
+                       );
                    has_statement = true;
                 } else {
                     // Consume rest of the line!
@@ -525,12 +515,11 @@ impl Processor {
             //Ooops, doubled up searching for Name tokens
             else if let Some((current_idx, match_str)) = line.test_and_return(&POSSIBLE_NAME) {
                 println!("Found a name {}", match_str);
-                product.push(Token::Make(
-                    TType::Name,
-                    Position::m(current_idx, lineno),
-                    Position::m(current_idx+match_str.len(), lineno),
-                    match_str
-                ));
+                product.push(
+                    Token::quick(
+                        TType::Name, lineno, current_idx, current_idx+match_str.len(), match_str
+                    )
+                );
 
             }
             else if let Some((current_idx, match_str)) = line.test_and_return(&POSSIBLE_ONE_CHAR_NAME) {
