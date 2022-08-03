@@ -632,13 +632,23 @@ mod tests {
     // use crate::tokenizer::module_lines::ModuleLines;
 
 
+    use crate::tokenizer::position::Position;
     use crate::tokenizer::ttype::TType;
     use crate::tokenizer::token::Token;
 
     macro_rules! test_token{
         ($token:expr, $ttype:expr, $content:expr)=>{
             assert_eq!($token.r#type, $ttype);
-            assert_eq!($token.text, $content)
+            assert_eq!($token.text, $content);
+        }
+    }
+
+    macro_rules! test_token_w_position{
+        ($token:expr, $ttype:expr, $start:expr, $end:expr, $content:expr)=>{
+            assert_eq!($token.r#type, $ttype);
+            assert_eq!($token.start, Position::t($start));
+            assert_eq!($token.end, Position::t($end));
+            assert_eq!($token.text, $content);
         }
     }
 
