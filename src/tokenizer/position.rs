@@ -10,7 +10,7 @@ impl Position {
     pub fn m(col: usize, line: usize) -> Self{
         Self {
             col:col,
-            line:line.saturating_add(1),
+            line:line,
         }
     }
 
