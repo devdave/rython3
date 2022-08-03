@@ -823,7 +823,7 @@ mod tests {
         test_token_w_position!(tokens[5], TType::Number, (9, 1), (10, 1), "1" );
         test_token_w_position!(tokens[6], TType::Op, (11, 1), (13, 1), ">>" );
         test_token_w_position!(tokens[7], TType::Number, (14, 1), (15, 1), "5" );
-        test_token_w_position!(tokens[8], TType::Newline, (15, 1), (17, 1), "\n" );
+        test_token_w_position!(tokens[8], TType::Newline, (15, 1), (16, 1), "\n" );
         test_token_w_position!(tokens[9], TType::EndMarker, (0, 2), (0, 2), "" );
     }
 
