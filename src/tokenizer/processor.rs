@@ -19,7 +19,7 @@ use once_cell::sync::Lazy;
 use regex::{Regex};
 use std::io::{Read};
 use std::ops::Add;
-use log::{error, info};
+use log::{info};
 use crate::tokenizer::position::Position;
 
 // use std::str::Chars;
@@ -271,13 +271,13 @@ impl Processor {
         if self.indent_stack.len() > 0 {
             while self.indent_stack.len() > 0 {
                 self.indent_stack.pop();
-                body.push(Token::quick(TType::Dedent, module_size, 0, 0, ""));
+                body.push(Token::quick(TType::Dedent, module_size+1, 0, 0, ""));
 
             }
         }
 
         if body.last().unwrap().r#type != TType::EndMarker {
-            body.push(Token::quick(TType::EndMarker, module_size, 0, 0, ""));
+            body.push(Token::quick(TType::EndMarker, module_size+1, 0, 0, ""));
         }
 
 
@@ -356,6 +356,7 @@ impl Processor {
         while line.peek() != None {
 
 
+            let index = line.get_idx();
 
             //We're continuing to consume a string, like a `'` or `"` but it could also be a `"""`
             if self.string_continues == true {
@@ -416,7 +417,7 @@ impl Processor {
             //Look for a comment and consume all after it.
             else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A#.*").expect("regex")) {
                 product.push(
-                            Token::quick(TType::Comment, lineno, current_idx, current_idx+retval.len(), retval)
+                            Token::quick(TType::Comment, lineno, index, current_idx, retval)
                 );
             }
             // Look for a operator
@@ -446,7 +447,7 @@ impl Processor {
                 }
 
                 product.push(
-                            Token::quick(TType::Op, lineno, current_idx.saturating_sub(retval.len()), current_idx, retval)
+                            Token::quick(TType::Op, lineno, index, current_idx, retval)
                     );
                 has_statement = true;
             }
@@ -490,7 +491,7 @@ impl Processor {
             // look for numbers
             else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\d+").expect("regex")) {
                 product.push(
-                        Token::quick(TType::Number, lineno, current_idx.saturating_sub(retval.len()), current_idx, retval)
+                        Token::quick(TType::Number, lineno, index, current_idx, retval)
                     );
                 has_statement = true;
             }
@@ -516,7 +517,7 @@ impl Processor {
                 self.string_start = Position::m(current_idx, lineno);
 
                 if let Some((end_idx, end_match_str)) = line.test_and_return(&TRIPLE_QUOTE_AND_PRECONTENT) {
-                    let str_content = format!(r#""""{}"#, end_match_str);
+                    let str_content = format!(r#"""{}"#, end_match_str);
                     product.push(
                             Token::quick(TType::String, lineno, current_idx, end_idx, str_content.as_str())
                        );
@@ -823,7 +824,45 @@ mod tests {
 
     #[test]
     fn test_comparison() {
-        let tokens = Processor::tokenize_file("test_fixtures/test_comparison.py", Some("test_comparison"), true);
+        let tokens = Processor::tokenize_file("test_fixtures/test_comparison.py", Some("test_comparison"), false);
+        test_token_w_position!(tokens[0], TType::Encoding, (0, 0), (0, 0), "utf-8" );
+        test_token_w_position!(tokens[1], TType::Name, (0, 1), (2, 1), "if" );
+        test_token_w_position!(tokens[2], TType::Number, (3, 1), (4, 1), "1" );
+        test_token_w_position!(tokens[3], TType::Op, (5, 1), (6, 1), "<" );
+        test_token_w_position!(tokens[4], TType::Number, (7, 1), (8, 1), "1" );
+        test_token_w_position!(tokens[5], TType::Op, (9, 1), (10, 1), ">" );
+        test_token_w_position!(tokens[6], TType::Number, (11, 1), (12, 1), "1" );
+        test_token_w_position!(tokens[7], TType::Op, (13, 1), (15, 1), "==" );
+        test_token_w_position!(tokens[8], TType::Number, (16, 1), (17, 1), "1" );
+        test_token_w_position!(tokens[9], TType::Op, (18, 1), (20, 1), ">=" );
+        test_token_w_position!(tokens[10], TType::Number, (21, 1), (22, 1), "5" );
+        test_token_w_position!(tokens[11], TType::Op, (23, 1), (25, 1), "<=" );
+        test_token_w_position!(tokens[12], TType::Number, (26, 1), (30, 1), "0x15" );
+        test_token_w_position!(tokens[13], TType::Op, (31, 1), (33, 1), "<=" );
+        test_token_w_position!(tokens[14], TType::Number, (34, 1), (38, 1), "0x12" );
+        test_token_w_position!(tokens[15], TType::Op, (39, 1), (41, 1), "!=" );
+        test_token_w_position!(tokens[16], TType::Number, (42, 1), (43, 1), "1" );
+        test_token_w_position!(tokens[17], TType::Name, (44, 1), (47, 1), "and" );
+        test_token_w_position!(tokens[18], TType::Number, (48, 1), (49, 1), "5" );
+        test_token_w_position!(tokens[19], TType::Name, (50, 1), (52, 1), "in" );
+        test_token_w_position!(tokens[20], TType::Number, (53, 1), (54, 1), "1" );
+        test_token_w_position!(tokens[21], TType::Name, (55, 1), (58, 1), "not" );
+        test_token_w_position!(tokens[22], TType::Name, (59, 1), (61, 1), "in" );
+        test_token_w_position!(tokens[23], TType::Number, (62, 1), (63, 1), "1" );
+        test_token_w_position!(tokens[24], TType::Name, (64, 1), (66, 1), "is" );
+        test_token_w_position!(tokens[25], TType::Number, (67, 1), (68, 1), "1" );
+        test_token_w_position!(tokens[26], TType::Name, (69, 1), (71, 1), "or" );
+        test_token_w_position!(tokens[27], TType::Number, (72, 1), (73, 1), "5" );
+        test_token_w_position!(tokens[28], TType::Name, (74, 1), (76, 1), "is" );
+        test_token_w_position!(tokens[29], TType::Name, (77, 1), (80, 1), "not" );
+        test_token_w_position!(tokens[30], TType::Number, (81, 1), (82, 1), "1" );
+        test_token_w_position!(tokens[31], TType::Op, (82, 1), (83, 1), ":" );
+        test_token_w_position!(tokens[32], TType::Newline, (83, 1), (84, 1), "\n" );
+        test_token_w_position!(tokens[33], TType::Indent, (0, 2), (4, 2), "    " );
+        test_token_w_position!(tokens[34], TType::Name, (4, 2), (8, 2), "pass" );
+        test_token_w_position!(tokens[35], TType::Newline, (8, 2), (9, 2), "\n" );
+        test_token_w_position!(tokens[36], TType::Dedent, (0, 3), (0, 3), "" );
+        test_token_w_position!(tokens[37], TType::EndMarker, (0, 3), (0, 3), "" );
     }
 
     #[test]
