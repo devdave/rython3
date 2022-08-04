@@ -72,7 +72,7 @@ impl ManagedLine {
         let test = pattern.find(remaining);
         if let Some(found) = test {
             let len = found.end() - found.start();
-            self.idx += found.start() + len;
+            self.idx += found.as_str().len();
             return Some((self.idx.clone(), found.as_str()));
         }
         None
