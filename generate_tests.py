@@ -31,25 +31,33 @@ def token_type_from_python_to_rust(typefield):
             raise ValueError("Not handled yet")
 
 
+def process_file(element:Path):
+    with element.open("rb") as my_file:
+        print(f"Processing: {element}")
+        print("=" * 80)
+        try:
+            tokens = tokenize(my_file.readline)
+            for idx, token in enumerate(tokens):
+                positions = f"({token.start[1]}, {token.start[0]}), ({token.end[1]}, {token.end[0]})"
+                ttype = f"{token_type_from_python_to_rust(token.type)}"
+                print(f"test_token_w_position!(tokens[{idx}], {ttype}, {positions}, \"{token.string}\" );")
+        except Exception as exc:
+            print(f"Failed to tokenize because {exc}")
+
+        print("Finished\n")
+
+
 
 def walk_workingpath(work_path:Path):
-    for element in work_path.glob("*.py"):
-        if element.is_file():
+    if work_path.is_dir():
+        for element in work_path.glob("*.py"):
+            if element.is_file():
+                process_file(element)
+    elif work_path.is_file():
+        process_file(work_path)
 
-            with element.open("rb") as my_file:
-                print(f"Processing: {element}")
-                print("="*80)
-                try:
-                    tokens = tokenize(my_file.readline)
-                    for idx, token in enumerate(tokens):
 
-                        positions = f"({token.start[1]}, {token.start[0]}), ({token.end[1]}, {token.end[0]})"
-                        ttype = f"{token_type_from_python_to_rust(token.type)}"
-                        print(f"test_token_w_position!(tokens[{idx}], {ttype}, {positions}, \"{token.string}\" );")
-                except Exception as exc:
-                    print(f"Failed to tokenize because {exc}")
 
-                print("Finished\n")
 
 
 
