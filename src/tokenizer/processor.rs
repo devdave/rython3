@@ -651,11 +651,12 @@ mod tests {
 
     macro_rules! test_token_w_position{
         ($token:expr, $ttype:expr, $start:expr, $end:expr, $content:expr)=>{
-            println!("Testing for {:?}", $token.text);
-            assert_eq!($token.r#type, $ttype);
-            assert_eq!($token.start, Position::t($start));
-            assert_eq!($token.end, Position::t($end));
+
+            assert_eq!($token.r#type, $ttype, "Testing for type with {:?} {:?} != {:?}", $token.text, $token.r#type, $ttype);
             assert_eq!($token.text, $content);
+            assert_eq!($token.start, Position::t($start), "Testing for start with {:?} % {:?} : {:?} != {:?}", $token.text, $token.r#type, $token.start, $start);
+            assert_eq!($token.end, Position::t($end), "Testing for end with {:?} % {:?} : {:?} != {:?}", $token.text, $token.r#type, $token.end, $end);
+
         }
     }
 
