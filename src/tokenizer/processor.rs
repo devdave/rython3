@@ -787,8 +787,29 @@ mod tests {
     #[test]
     fn test_additive() {
 
-        let tokens = Processor::tokenize_file("test_fixtures/test_additive.py", Some("additive"), true);
+        let tokens = Processor::tokenize_file("test_fixtures/test_additive.py", Some("additive"), false);
         print_tokens(&tokens);
+        test_token_w_position!(tokens[0], TType::Encoding, (0, 0), (0, 0), "utf-8" );
+        test_token_w_position!(tokens[1], TType::Name, (0, 1), (1, 1), "x" );
+        test_token_w_position!(tokens[2], TType::Op, (2, 1), (3, 1), "=" );
+        test_token_w_position!(tokens[3], TType::Number, (4, 1), (5, 1), "1" );
+        test_token_w_position!(tokens[4], TType::Op, (6, 1), (7, 1), "-" );
+        test_token_w_position!(tokens[5], TType::Name, (8, 1), (9, 1), "y" );
+        test_token_w_position!(tokens[6], TType::Op, (10, 1), (11, 1), "+" );
+        test_token_w_position!(tokens[7], TType::Number, (12, 1), (14, 1), "15" );
+        test_token_w_position!(tokens[8], TType::Op, (15, 1), (16, 1), "-" );
+        test_token_w_position!(tokens[9], TType::Number, (17, 1), (18, 1), "1" );
+        test_token_w_position!(tokens[10], TType::Op, (19, 1), (20, 1), "+" );
+        test_token_w_position!(tokens[11], TType::Number, (21, 1), (26, 1), "0x124" );
+        test_token_w_position!(tokens[12], TType::Op, (27, 1), (28, 1), "+" );
+        test_token_w_position!(tokens[13], TType::Name, (29, 1), (30, 1), "z" );
+        test_token_w_position!(tokens[14], TType::Op, (31, 1), (32, 1), "+" );
+        test_token_w_position!(tokens[15], TType::Name, (33, 1), (34, 1), "a" );
+        test_token_w_position!(tokens[16], TType::Op, (34, 1), (35, 1), "[" );
+        test_token_w_position!(tokens[17], TType::Number, (35, 1), (36, 1), "5" );
+        test_token_w_position!(tokens[18], TType::Op, (36, 1), (37, 1), "]" );
+        test_token_w_position!(tokens[19], TType::Newline, (37, 1), (38, 1), "\n" );
+        test_token_w_position!(tokens[20], TType::EndMarker, (0, 2), (0, 2), "" );
     }
 
     #[test]
