@@ -26,10 +26,6 @@ use crate::tokenizer::position::Position;
 //Copied from LIBCST
 //TODO relocate to a common rgxs.rs file?
 const MAX_INDENT: usize = 100;
-// const MAX_CHAR: char = char::MAX;
-// const TAB_SIZE: usize = 8;
-// // const ALT_TAB_SIZE: usize= 1;
-// const SPACE_INDENT_SIZE: usize = 4;
 
 static TRIPLE_QUOTE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"\A""""#).expect("regex"));
