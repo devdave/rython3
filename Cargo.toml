@@ -14,3 +14,5 @@ unicode-segmentation = "1"
 peg = { git = "https://github.com/kevinmehall/rust-peg", rev = "4b146b4b78a80c07e43d7ace2d97f65bfde279a8" }
 log = "0.4"
 pretty_env_logger = "0.3.1"
+num-traits  = "0.2.15"
+num-integer = "0.1.45"

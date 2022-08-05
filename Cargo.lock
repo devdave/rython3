@@ -221,6 +221,8 @@ version = "0.1.0"
 dependencies = [
  "itertools",
  "log",
+ "num-integer",
+ "num-traits",
  "once_cell",
  "peg",
  "pretty_env_logger",
