@@ -419,10 +419,17 @@ impl Processor {
                 );
             }
 
+            //Check for Floating point #'s - version 1
+            else if let Some((current_idx, retval)) = line.test_and_return(&POINTFLOAT1) {
                 product.push(
-                            Token::quick(TType::Op, lineno, index, current_idx, retval)
-                    );
-                has_statement = true;
+                    Token::quick(TType::Number, lineno, index, current_idx, retval)
+                );
+            }
+            //Check for Floating point #$'s - version 2
+            else if let Some((current_idx, retval)) = line.test_and_return(&POINTFLOAT2) {
+                product.push(
+                    Token::quick(TType::Number, lineno, index, current_idx, retval)
+                );
             }
             // like Regex says, look for non-quoted strings
             else if let Some((current_idx, retval)) = line.test_and_return(&POSSIBLE_NAME.to_owned()) {
