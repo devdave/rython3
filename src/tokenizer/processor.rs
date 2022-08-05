@@ -422,31 +422,6 @@ impl Processor {
                             Token::quick(TType::Comment, lineno, index, current_idx, retval)
                 );
             }
-            // Look for a operator
-            else if let Some((current_idx, retval)) = line.test_and_return(&OPERATOR_RE.to_owned()) {
-                let char_retval = retval.chars().nth(0).unwrap();
-
-                if retval.len() == 1 && retval.contains(&['[', '(']) {
-                    self.paren_stack.push((char_retval, lineno));
-
-
-                } else if retval.contains(&[']', ')']) {
-                    let latest = self.paren_stack.last();
-                    match latest {
-                        Some((verify_char, _ignore)) => {
-                            if *verify_char == '(' && char_retval == ')' {
-                                self.paren_stack.pop();
-                            } else if *verify_char == '[' && char_retval == ']' {
-                                self.paren_stack.pop();
-                            } else {
-                                return Err(TokError::MismatchedClosingParen(*verify_char, char_retval));
-                            }
-                        },
-                        None => {
-                            return Err(TokError::UnmatchedClosingParen(char_retval));
-                        }
-                    }
-                }
 
                 product.push(
                             Token::quick(TType::Op, lineno, index, current_idx, retval)
@@ -494,6 +469,37 @@ impl Processor {
             else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\d+").expect("regex")) {
                 product.push(
                         Token::quick(TType::Number, lineno, index, current_idx, retval)
+                    );
+                has_statement = true;
+            }
+            // Look for a operator
+            else if let Some((current_idx, retval)) = line.test_and_return(&OPERATOR_RE.to_owned()) {
+                let char_retval = retval.chars().nth(0).unwrap();
+
+                if retval.len() == 1 && retval.contains(&['[', '(']) {
+                    self.paren_stack.push((char_retval, lineno));
+
+
+                } else if retval.contains(&[']', ')']) {
+                    let latest = self.paren_stack.last();
+                    match latest {
+                        Some((verify_char, _ignore)) => {
+                            if *verify_char == '(' && char_retval == ')' {
+                                self.paren_stack.pop();
+                            } else if *verify_char == '[' && char_retval == ']' {
+                                self.paren_stack.pop();
+                            } else {
+                                return Err(TokError::MismatchedClosingParen(*verify_char, char_retval));
+                            }
+                        },
+                        None => {
+                            return Err(TokError::UnmatchedClosingParen(char_retval));
+                        }
+                    }
+                }
+
+                product.push(
+                            Token::quick(TType::Op, lineno, index, current_idx, retval)
                     );
                 has_statement = true;
             }
