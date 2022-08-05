@@ -85,6 +85,9 @@ static OCTNUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A0[oO](?:_?[0-7])+").
 
 static DECNUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A(?:0(?:_?0)*|[1-9](?:_?[0-9])*)").expect("regex"));
 
+static POINTFLOAT1: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A[0-9](?:_?[0-9])*\.(?:[0-9](?:_?[0-9])*)?").expect("regex"));
+static POINTFLOAT2: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A\.[0-9](?:_?[0-9])*").expect("regex"));
+
 
 #[derive(PartialEq, Debug)]
 enum StringType {
