@@ -569,8 +569,8 @@ impl Processor {
                     };
                     product.push(Token::Make(
                             what,
-                            Position::m(line.len()-1, lineno),
-                            Position::m(line.len(), lineno),
+                            Position::m(index, lineno),
+                            Position::m(index+1, lineno),
                             "\n"
                         ));
 
