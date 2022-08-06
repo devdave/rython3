@@ -847,11 +847,68 @@ mod tests {
 
     #[test]
     fn test_async() {
-        let tokens = Processor::tokenize_file("test_fixtures/test_async.py", Some("test_async"), true);
-        print_tokens(&tokens);
-
-        assert_eq!(tokens.len(), 60);
-        //fuckkkkkkkk me that's a lot of data to double check
+        let tokens = Processor::tokenize_file("test_fixtures/test_async.py", Some("test_async"), false);
+        test_token_w_position!(tokens[0], TType::Encoding, (0, 0), (0, 0), "utf-8" );
+        test_token_w_position!(tokens[1], TType::Name, (0, 1), (5, 1), "async" );
+        test_token_w_position!(tokens[2], TType::Op, (6, 1), (7, 1), "=" );
+        test_token_w_position!(tokens[3], TType::Number, (8, 1), (9, 1), "1" );
+        test_token_w_position!(tokens[4], TType::Newline, (9, 1), (10, 1), "\n" );
+        test_token_w_position!(tokens[5], TType::Name, (0, 2), (1, 2), "a" );
+        test_token_w_position!(tokens[6], TType::Op, (2, 2), (3, 2), "=" );
+        test_token_w_position!(tokens[7], TType::Op, (4, 2), (5, 2), "(" );
+        test_token_w_position!(tokens[8], TType::Name, (5, 2), (10, 2), "async" );
+        test_token_w_position!(tokens[9], TType::Op, (11, 2), (12, 2), "=" );
+        test_token_w_position!(tokens[10], TType::Number, (13, 2), (14, 2), "1" );
+        test_token_w_position!(tokens[11], TType::Op, (14, 2), (15, 2), ")" );
+        test_token_w_position!(tokens[12], TType::Newline, (15, 2), (16, 2), "\n" );
+        test_token_w_position!(tokens[13], TType::Name, (0, 3), (5, 3), "async" );
+        test_token_w_position!(tokens[14], TType::Op, (5, 3), (6, 3), "(" );
+        test_token_w_position!(tokens[15], TType::Op, (6, 3), (7, 3), ")" );
+        test_token_w_position!(tokens[16], TType::Newline, (7, 3), (8, 3), "\n" );
+        test_token_w_position!(tokens[17], TType::Name, (0, 4), (5, 4), "class" );
+        test_token_w_position!(tokens[18], TType::Name, (6, 4), (11, 4), "async" );
+        test_token_w_position!(tokens[19], TType::Op, (11, 4), (12, 4), "(" );
+        test_token_w_position!(tokens[20], TType::Name, (12, 4), (15, 4), "Bar" );
+        test_token_w_position!(tokens[21], TType::Op, (15, 4), (16, 4), ")" );
+        test_token_w_position!(tokens[22], TType::Op, (16, 4), (17, 4), ":" );
+        test_token_w_position!(tokens[23], TType::Name, (17, 4), (21, 4), "pass" );
+        test_token_w_position!(tokens[24], TType::Newline, (21, 4), (22, 4), "\n" );
+        test_token_w_position!(tokens[25], TType::Name, (0, 5), (5, 5), "class" );
+        test_token_w_position!(tokens[26], TType::Name, (6, 5), (11, 5), "async" );
+        test_token_w_position!(tokens[27], TType::Op, (11, 5), (12, 5), ":" );
+        test_token_w_position!(tokens[28], TType::Name, (12, 5), (16, 5), "pass" );
+        test_token_w_position!(tokens[29], TType::Newline, (16, 5), (17, 5), "\n" );
+        test_token_w_position!(tokens[30], TType::Name, (0, 6), (5, 6), "await" );
+        test_token_w_position!(tokens[31], TType::Op, (6, 6), (7, 6), "=" );
+        test_token_w_position!(tokens[32], TType::Number, (8, 6), (9, 6), "1" );
+        test_token_w_position!(tokens[33], TType::Newline, (9, 6), (10, 6), "\n" );
+        test_token_w_position!(tokens[34], TType::Name, (0, 7), (3, 7), "foo" );
+        test_token_w_position!(tokens[35], TType::Op, (3, 7), (4, 7), "." );
+        test_token_w_position!(tokens[36], TType::Name, (4, 7), (9, 7), "async" );
+        test_token_w_position!(tokens[37], TType::Newline, (9, 7), (10, 7), "\n" );
+        test_token_w_position!(tokens[38], TType::Name, (0, 8), (5, 8), "async" );
+        test_token_w_position!(tokens[39], TType::Name, (6, 8), (9, 8), "for" );
+        test_token_w_position!(tokens[40], TType::Name, (10, 8), (11, 8), "a" );
+        test_token_w_position!(tokens[41], TType::Name, (12, 8), (14, 8), "in" );
+        test_token_w_position!(tokens[42], TType::Name, (15, 8), (16, 8), "b" );
+        test_token_w_position!(tokens[43], TType::Op, (16, 8), (17, 8), ":" );
+        test_token_w_position!(tokens[44], TType::Name, (18, 8), (22, 8), "pass" );
+        test_token_w_position!(tokens[45], TType::Newline, (22, 8), (23, 8), "\n" );
+        test_token_w_position!(tokens[46], TType::Name, (0, 9), (5, 9), "async" );
+        test_token_w_position!(tokens[47], TType::Name, (6, 9), (10, 9), "with" );
+        test_token_w_position!(tokens[48], TType::Name, (11, 9), (12, 9), "a" );
+        test_token_w_position!(tokens[49], TType::Name, (13, 9), (15, 9), "as" );
+        test_token_w_position!(tokens[50], TType::Name, (16, 9), (17, 9), "b" );
+        test_token_w_position!(tokens[51], TType::Op, (17, 9), (18, 9), ":" );
+        test_token_w_position!(tokens[52], TType::Name, (19, 9), (23, 9), "pass" );
+        test_token_w_position!(tokens[53], TType::Newline, (23, 9), (24, 9), "\n" );
+        test_token_w_position!(tokens[54], TType::Name, (0, 10), (5, 10), "async" );
+        test_token_w_position!(tokens[55], TType::Op, (5, 10), (6, 10), "." );
+        test_token_w_position!(tokens[56], TType::Name, (6, 10), (9, 10), "foo" );
+        test_token_w_position!(tokens[57], TType::Newline, (9, 10), (10, 10), "\n" );
+        test_token_w_position!(tokens[58], TType::Name, (0, 11), (5, 11), "async" );
+        test_token_w_position!(tokens[59], TType::Newline, (5, 11), (6, 11), "\n" );
+        test_token_w_position!(tokens[60], TType::EndMarker, (0, 12), (0, 12), "" );
     }
 
     #[test]
