@@ -40,7 +40,10 @@ def process_file(element:Path):
             for idx, token in enumerate(tokens):
                 positions = f"({token.start[1]}, {token.start[0]}), ({token.end[1]}, {token.end[0]})"
                 ttype = f"{token_type_from_python_to_rust(token.type)}"
-                print(f"test_token_w_position!(tokens[{idx}], {ttype}, {positions}, \"{token.string}\" );")
+                if token.string == "\r\n":
+                    print(f"test_token_w_position!(tokens[{idx}], {ttype}, {positions}, \"\\n\" );")
+                else:
+                    print(f"test_token_w_position!(tokens[{idx}], {ttype}, {positions}, \"{token.string}\" );")
         except Exception as exc:
             print(f"Failed to tokenize because {exc}")
 
