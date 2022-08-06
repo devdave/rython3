@@ -81,9 +81,17 @@ static OCTNUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A0[oO](?:_?[0-7])+").
 
 static DECNUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A(?:0(?:_?0)*|[1-9](?:_?[0-9])*)").expect("regex"));
 
+static PointfloatStr: &str = r"\A([0-9](?:_?[0-9])*\\.(?:[0-9](?:_?[0-9])*)?|\\.[0-9](?:_?[0-9])*)([eE][-+]?[0-9](?:_?[0-9])*)?";
+
+static POINTFLOAT: Lazy<Regex> = Lazy::new(|| Regex::new(PointfloatStr).expect("regex"));
 static POINTFLOAT1: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A[0-9](?:_?[0-9])*\.(?:[0-9](?:_?[0-9])*)?").expect("regex"));
 static POINTFLOAT2: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A\.[0-9](?:_?[0-9])*").expect("regex"));
 
+static EXPONENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"[eE][-+]?[0-9](?:_?[0-9])*").expect("regex"));
+
+const NumberStr: &str = r"\A(([0-9](?:_?[0-9])*[jJ]|(([0-9](?:_?[0-9])*\\.(?:[0-9](?:_?[0-9])*)?|\\.[0-9](?:_?[0-9])*)([eE][-+]?[0-9](?:_?[0-9])*)?|[0-9](?:_?[0-9])*[eE][-+]?[0-9](?:_?[0-9])*)[jJ])|(([0-9](?:_?[0-9])*\\.(?:[0-9](?:_?[0-9])*)?|\\.[0-9](?:_?[0-9])*)([eE][-+]?[0-9](?:_?[0-9])*)?|[0-9](?:_?[0-9])*[eE][-+]?[0-9](?:_?[0-9])*)|(0[xX](?:_?[0-9a-fA-F])+|0[bB](?:_?[01])+|0[oO](?:_?[0-7])+|(?:0(?:_?0)*|[1-9](?:_?[0-9])*)))";
+
+static NUMBER: Lazy<Regex> = Lazy::new(||Regex::new(NumberStr).expect("regex"));
 
 #[derive(PartialEq, Debug)]
 enum StringType {
@@ -419,8 +427,24 @@ impl Processor {
                 );
             }
 
+
+            // like Regex says, look for non-quoted strings
+            else if let Some((current_idx, retval)) = line.test_and_return(&POSSIBLE_NAME.to_owned()) {
+                product.push(
+                         Token::quick(TType::Name, lineno, index, current_idx, retval)
+                    );
+                has_statement = true;
+            }
+            else if let Some((current_idx, retval)) = line.test_and_return(&POINTFLOAT) {
+                debug!("Matched {} with pf1", retval);
+                product.push(
+                    Token::quick(TType::Number, lineno, index, current_idx, retval)
+                );
+            }
+
             //Check for Floating point #'s - version 1
             else if let Some((current_idx, retval)) = line.test_and_return(&POINTFLOAT1) {
+                debug!("Matched {} with pf1", retval);
                 product.push(
                     Token::quick(TType::Number, lineno, index, current_idx, retval)
                 );
@@ -431,42 +455,41 @@ impl Processor {
                     Token::quick(TType::Number, lineno, index, current_idx, retval)
                 );
             }
-            // like Regex says, look for non-quoted strings
-            else if let Some((current_idx, retval)) = line.test_and_return(&POSSIBLE_NAME.to_owned()) {
+            // //Hex number
+            // else if let Some((current_idx, retval)) = line.test_and_return(&HEXNUMBER) {
+            //     product.push(
+            //             Token::quick(TType::Number, lineno, index, current_idx, retval)
+            //         );
+            //     has_statement = true;
+            // }
+            // //Binary number
+            // else if let Some((current_idx, retval)) = line.test_and_return(&BINNUMBER) {
+            //     product.push(
+            //             Token::quick(TType::Number, lineno, index, current_idx, retval)
+            //         );
+            //     has_statement = true;
+            // }
+            // //Octal number
+            // else if let Some((current_idx, retval)) = line.test_and_return(&OCTNUMBER) {
+            //     product.push(
+            //             Token::quick(TType::Number, lineno, index, current_idx, retval)
+            //         );
+            //     has_statement = true;
+            // }
+            //
+            //
+            // //Declarative number (has _'s)
+            // else if let Some((current_idx, retval)) = line.test_and_return(&DECNUMBER) {
+            //     product.push(
+            //             Token::quick(TType::Number, lineno, index, current_idx, retval)
+            //         );
+            //     has_statement = true;
+            // }
+            //Last ditch effort to catch numbers
+            else if let Some((new_idx, retval)) = line.test_and_return(&NUMBER) {
                 product.push(
-                         Token::quick(TType::Name, lineno, index, current_idx, retval)
-                    );
-                has_statement = true;
-            }
-            //Hex number
-            else if let Some((current_idx, retval)) = line.test_and_return(&HEXNUMBER) {
-                product.push(
-                        Token::quick(TType::Number, lineno, index, current_idx, retval)
-                    );
-                has_statement = true;
-            }
-            //Binary number
-            else if let Some((current_idx, retval)) = line.test_and_return(&BINNUMBER) {
-                product.push(
-                        Token::quick(TType::Number, lineno, index, current_idx, retval)
-                    );
-                has_statement = true;
-            }
-            //Octal number
-            else if let Some((current_idx, retval)) = line.test_and_return(&OCTNUMBER) {
-                product.push(
-                        Token::quick(TType::Number, lineno, index, current_idx, retval)
-                    );
-                has_statement = true;
-            }
-
-
-            //Declarative number (has _'s)
-            else if let Some((current_idx, retval)) = line.test_and_return(&DECNUMBER) {
-                product.push(
-                        Token::quick(TType::Number, lineno, index, current_idx, retval)
-                    );
-                has_statement = true;
+                    Token::quick(TType::Number, lineno, index, new_idx, retval)
+                );
             }
             // look for numbers
             else if let Some((current_idx, retval)) = line.test_and_return(&Regex::new(r"\A\d+").expect("regex")) {
@@ -594,8 +617,6 @@ impl Processor {
             }
 
         } // end while line peek
-
-
 
 
 
