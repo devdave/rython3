@@ -84,8 +84,8 @@ static DECNUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A(?:0(?:_?0)*|[1-9](?
 static PointfloatStr: &str = r"\A([0-9](?:_?[0-9])*\\.(?:[0-9](?:_?[0-9])*)?|\\.[0-9](?:_?[0-9])*)([eE][-+]?[0-9](?:_?[0-9])*)?";
 
 static POINTFLOAT: Lazy<Regex> = Lazy::new(|| Regex::new(PointfloatStr).expect("regex"));
-static POINTFLOAT1: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A[0-9](?:_?[0-9])*\.(?:[0-9](?:_?[0-9])*)?").expect("regex"));
-static POINTFLOAT2: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A\.[0-9](?:_?[0-9])*").expect("regex"));
+static POINTFLOAT1: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A[0-9](?:_?[0-9])*\.(?:[0-9](?:_?[0-9])*)?([eE][-+]?[0-9](?:_?[0-9])*)?").expect("regex"));
+static POINTFLOAT2: Lazy<Regex> = Lazy::new(|| Regex::new(r"\A\.[0-9](?:_?[0-9])*([eE][-+]?[0-9](?:_?[0-9])*)?").expect("regex"));
 
 static EXPONENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"[eE][-+]?[0-9](?:_?[0-9])*").expect("regex"));
 
