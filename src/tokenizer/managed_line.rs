@@ -1,5 +1,6 @@
 
 use regex::{Regex};
+use unicode_segmentation::UnicodeSegmentation;
 // use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Clone)]
@@ -21,7 +22,7 @@ impl ManagedLine {
             content: vec!['b'],
         };
 
-        hack.content = hack.text[..].to_string().chars().collect();
+        hack.content = hack.text.graphemes(true).as_str().chars().collect();
 
         return hack;
     }
@@ -68,10 +69,11 @@ impl ManagedLine {
 
     pub fn test_and_return(&mut self, pattern: &Regex) -> Option<(usize, &str)> {
 
-        let remaining = &self.text[self.idx..];
+        //Honestly... no idea if this worked as I don't test for unicode right now.
+        let remaining = &self.text.graphemes(true).as_str()[self.idx..];
         let test = pattern.find(remaining);
         if let Some(found) = test {
-            let len = found.end() - found.start();
+            // let len = found.end() - found.start();
             self.idx += found.as_str().len();
             return Some((self.idx.clone(), found.as_str()));
         }
