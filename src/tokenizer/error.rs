@@ -1,7 +1,7 @@
 use thiserror;
 
 #[derive(Copy, Clone, Debug, thiserror::Error, Eq, PartialEq)]
-pub enum TokError<'t> {
+pub enum TokError {
     #[error("inconsistent mixing of tabs and spaces")]
     TabSpace,
     #[error("too many indentation levels")]
@@ -12,8 +12,8 @@ pub enum TokError<'t> {
     LineContinuation,
     #[error("unexpected end of file after a line continuation")]
     LineContinuationEof,
-    #[error("{0:?} is not a valid identifier")]
-    BadIdentifier(&'t str),
+    // #[error("{0:?} is not a valid identifier")]
+    // BadIdentifier(String),
     #[error("invalid decimal literal")]
     BadDecimal,
     #[error(
@@ -44,4 +44,6 @@ pub enum TokError<'t> {
     MismatchedClosingParenOnLine(char, char, usize),
     #[error("{0:?} is not a valid character in this position")]
     BadCharacter(char),
+    #[error("non specific issue")]
+    Default,
 }
