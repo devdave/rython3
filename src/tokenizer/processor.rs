@@ -178,6 +178,11 @@ impl Processor {
 
     }
 
+    pub fn tokenize_str(input: &str, module_name: Option<String> ) -> Vec<Token> {
+        let mut engine = Processor::consume_string(input.to_string(), module_name);
+        return engine.run(true).expect("tokens");
+    }
+
     pub fn consume_string(input: String, module_name: Option<String>) -> Self {
         let product = if input.contains("\r\n") {
             input.split("\r\n")
