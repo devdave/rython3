@@ -18,6 +18,7 @@ use super::{
 use once_cell::sync::Lazy;
 use regex::{Regex};
 use std::io::{Read};
+
 use log::{info};
 use crate::tokenizer::position::Position;
 
@@ -177,9 +178,10 @@ impl Processor {
 
     }
 
-    pub fn tokenize_str(input: &str, module_name: Option<String> ) -> Vec<Token> {
+    pub fn tokenize_str(input: &str, module_name: Option<String> ) -> Result<Vec<Token>, TokError> {
+
         let mut engine = Processor::consume_string(input.to_string(), module_name);
-        return engine.run(true).expect("tokens");
+        return engine.run(true);
     }
 
     pub fn consume_string(input: String, module_name: Option<String>) -> Self {
@@ -254,9 +256,9 @@ impl Processor {
                     },
                     Err(issue) => {
 
-                        // return Err(issue.clone());
+                         return Err(issue.clone());
 
-                        panic!("Tokenizer failure: {:?}", issue);
+                        // panic!("Tokenizer failure: {:?}", issue);
                         // TODO figure out why the borrow checker freaks out on this line
 
                     }
@@ -686,7 +688,9 @@ impl Processor {
 
 #[cfg(test)]
 mod tests {
+
     use crate::Processor;
+    use crate::tokenizer::error::TokError;
     // use crate::tokenizer::module_lines::ModuleLines;
 
 
@@ -1387,7 +1391,7 @@ mod tests {
     }
     
     #[test]
-    fn test_valid_invalid_literals() {
+    fn test_valid_literals() {
         let VALID_UNDERSCORE_LITERALS: Vec<&str> = vec![
             "0_0_0",
             "4_2",
@@ -1417,8 +1421,29 @@ mod tests {
                 continue;
             }
 
-            let result = Processor::tokenize_str(value, Some("ltierals".to_string()));
+            let result = Processor::tokenize_str(value, Some("ltierals".to_string())).expect("tokens");
             assert_eq!(result[0].r#type, TType::Number, "Got the wrong type when processing {:?}.  Got {:?}", value, result[0]);
         }
+    }
+
+    #[test]
+    fn try_syntax_errors() {
+        let result = Processor::tokenize_str("(1+2]", Some("__main__".to_string()));
+
+        match result {
+            Err(issue) => {
+                assert_eq!(issue, TokError::MismatchedClosingParen('(', ']'));
+            },
+            _ => {},
+        }
+
+
+        match Processor::tokenize_str("1_", Some("__main__".to_string())) {
+            Err(issue) => {
+                assert_eq!(issue, TokError::BadCharacter('_'));
+            },
+            _ => {},
+        }
+
     }
 }
