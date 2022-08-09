@@ -62,16 +62,6 @@ static SINGLE_APOSTROPHE_PRECONTENT: Lazy<Regex> =
 static SPACE_TAB_FORMFEED_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A[ \f\t]+").expect("regex"));
 
-static ANY_NON_NEWLINE_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\A[^\r\n]+").expect("regex"));
-
-static STRING_PREFIX_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\A(?i)(u|[bf]r|r[bf]|r|b|f)").expect("regex"));
-
-static StringStr: &str = r#"\A((|Rb|br|Br|rF|F|R|r|rb|rf|B|u|RB|bR|f|b|FR|Rf|fr|Fr|rB|BR|RF|fR|U)\'[^\n\'\\]*(?:\.[^\n\'\\]*)*\'|\A(|Rb|br|Br|rF|F|R|r|rb|rf|B|u|RB|bR|f|b|FR|Rf|fr|Fr|rB|BR|RF|fR|U)"[^\n"\\]*(?:\.[^\n"\\]*)*")"#;
-
-//static STRINGS: Lazy<Regex> = Lazy::new(|| Regex::new(StringStr).expect("regex"));
-
 
 static POTENTIAL_IDENTIFIER_TAIL_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\A(\w|[^\x00-\x7f])+").expect("regex"));
