@@ -4,12 +4,15 @@ extern crate pretty_env_logger;
 #[macro_use] extern crate log;
 
 mod tokenizer;
+mod parser;
+
 use std::{env};
 
 // use log::{debug, error, info};
 
 
 use tokenizer::Processor;
+
 
 
 

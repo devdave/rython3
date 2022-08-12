@@ -7,4 +7,6 @@ mod managed_line;
 mod module_lines;
 mod position;
 
+pub use token::Token;
 pub use processor::Processor;
+pub use ttype::TType;
