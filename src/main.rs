@@ -5,6 +5,7 @@ extern crate pretty_env_logger;
 
 mod tokenizer;
 mod parser;
+mod ast;
 
 use std::{env};
 
