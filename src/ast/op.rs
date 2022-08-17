@@ -8,7 +8,7 @@ pub struct AssignEqual<'a> {
     pub(crate) tok: TokenRef<'a>,
 }
 
-pub enum UnaryOp {
+pub enum UnaryOperation {
     Plus,
     Minus,
     BitInvert,

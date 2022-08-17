@@ -1,6 +1,6 @@
 use std::{mem::swap, rc::Rc};
 use super::op::{
-    UnaryOp, BinaryOperation, BooleanOp,
+    UnaryOperation, BinaryOperation, BooleanOp,
 };
 
 // Atomic nodes
@@ -75,7 +75,7 @@ pub enum Expression<'a> {
     Hexidecimal(Box<Hexidecimal<'a>>),
     Imaginary(Box<Imaginary<'a>>),
     Comparison(Box<Comparison<'a>>),
-    UnaryOperation(Box<UnaryOperation<'a>>),
+    UnaryOperation(Box<UnaryOperation>),
     BinaryOperation(Box<BinaryOperation>),
     BooleanOperation(Box<BooleanOperation<'a>>),
     Attribute(Box<Attribute<'a>>),
