@@ -4,7 +4,7 @@ use crate::tokenizer::position::Position;
 use crate::tokenizer::ttype::TType;
 // use crate::tokenizer::position::Position;
 
-pub struct Token {
+pub struct Token<'a> {
     pub r#type: TType,
     pub start: Position,
     pub end: Position,
@@ -12,7 +12,8 @@ pub struct Token {
 }
 
 #[allow(non_snake_case)]
-impl Token {
+impl<'a> Token<'a>  {
+
     pub(crate) fn Make(ttype: TType, start: Position, end: Position, content: &str) -> Self {
         Self {
             r#type: ttype,
@@ -32,7 +33,7 @@ impl Token {
     }
 }
 
-impl Debug for Token {
+impl<'a>  Debug for Token<'a>  {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Token")
             .field("type", &self.r#type)
@@ -43,7 +44,7 @@ impl Debug for Token {
     }
 }
 
-impl Display for Token {
+impl <'a> Display for Token<'a>  {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Token")
             .field("type", &self.r#type)
@@ -55,7 +56,7 @@ impl Display for Token {
 
 }
 
-impl PartialEq for Token {
+impl <'a> PartialEq for Token<'a>  {
     fn eq(&self, other: &Self) -> bool {
         return self.r#type == other.r#type && self.text == other.text;
     }
