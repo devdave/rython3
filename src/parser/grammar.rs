@@ -3,16 +3,18 @@ use std::rc::Rc;
 
 use crate::tokenizer::{Token};
 use crate::tokenizer::TType::{self, String, Number, Name, Op as Operator, NL, EndMarker, Newline};
+use crate::ast::{Expression};
 
 use peg::str::LineCol;
 use peg::{parser, Parse, ParseElem, RuleResult};
 
 
 #[derive(Debug)]
-pub struct TokVec(Vec<Rc<Token>>);
+pub struct TokVec<'a> (Vec<Rc<Token<'a>>>);
 
-impl std::convert::From<Vec<Token>> for TokVec {
-    fn from(vec: Vec<Token>) -> Self {
+
+impl <'a> std::convert::From<Vec<Token<'a>>> for TokVec <'a>{
+    fn from(vec: Vec<Token<'a>>) -> Self {
         TokVec(vec.into_iter().map(Rc::new).collect())
     }
 }
@@ -31,7 +33,7 @@ impl std::fmt::Display for ParseLoc {
 }
 
 
-impl Parse for TokVec {
+impl <'a>Parse for TokVec<'a> {
     type PositionRepr = ParseLoc;
 
     fn start<'input>(&'input self) -> usize {
@@ -59,10 +61,10 @@ impl Parse for TokVec {
     }
 }
 
-type TokenRef = Rc<Token>;
+type TokenRef<'a> = Rc<Token<'a>>;
 
-impl ParseElem for TokVec {
-    type Element = TokenRef;
+impl <'a> ParseElem for TokVec<'a> {
+    type Element = TokenRef<'a>;
 
     fn parse_elem(&self, pos: usize) -> RuleResult<Self::Element> {
         match self.0.get(pos) {
@@ -86,7 +88,7 @@ pub struct ValueNode {
 // }
 
 parser! {
-    pub grammar python() for TokVec {
+    pub grammar python<'a>() for TokVec<'a> {
 
 
         //Starting rules
