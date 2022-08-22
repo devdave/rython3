@@ -297,7 +297,7 @@ impl <'a> Processor<'a>  {
         return Ok(body);
     }
 
-    fn process_line(&mut self, line: &mut ManagedLine) -> Result<Vec<Token>, TokError> {
+    fn process_line(&mut self, line: &mut ManagedLine<'a>) -> Result<Vec<Token<'a>>, TokError> {
 
 
         let mut product: Vec<Token> = Vec::new();
