@@ -1881,7 +1881,7 @@ fn add_param_default<'a>(
 }
 
 fn add_param_star<'a>(param: Param<'a>, star: TokenRef<'a>) -> Param<'a> {
-    let str = star.string;
+
     Param {
         ..param
     }
@@ -1919,16 +1919,13 @@ fn make_name_or_attr<'a>(
 
 fn make_name(tok: TokenRef) -> Name {
     Name {
-        value: tok.string,
-        ..Default::default()
+        value: tok.text,
     }
 }
 
 fn make_dot(tok: TokenRef) -> Dot {
     Dot {
-        whitespace_before: Default::default(),
-        whitespace_after: Default::default(),
-        tok,
+
     }
 }
 
@@ -1983,7 +1980,7 @@ fn make_import_from_as_names<'a>(
     let mut ret = vec![];
     let mut cur = first;
     for (comma, alias) in tail {
-        ret.push(cur.with_comma(comma));
+        ret.push(cur);
         cur = alias;
     }
     ret.push(cur);
@@ -1991,21 +1988,15 @@ fn make_import_from_as_names<'a>(
 }
 
 fn make_lpar(tok: TokenRef) -> LeftParen {
-    LeftParen {
-        whitespace_after: Default::default(),
-        lpar_tok: tok,
-    }
+    LeftParen {        tok    }
 }
 
 fn make_rpar(tok: TokenRef) -> RightParen {
-    RightParen {
-        whitespace_before: Default::default(),
-        rpar_tok: tok,
-    }
+    RightParen { tok }
 }
 
 fn make_attribute<'a>(value: Expression<'a>, dot: TokenRef<'a>, attr: Name<'a>) -> Attribute<'a> {
-    let dot = make_dot(dot);
+
     Attribute {
         attr,
         value: Box::new(value),
@@ -2052,15 +2043,11 @@ fn make_assignment<'a>(
     for (target, equal_tok) in lhs {
         targets.push(AssignTarget {
             target,
-            whitespace_before_equal: Default::default(),
-            whitespace_after_equal: Default::default(),
-            equal_tok,
         });
     }
     Assign {
         targets,
         value: rhs,
-        semicolon: Default::default(),
     }
 }
 
@@ -2069,7 +2056,6 @@ fn expr_to_element(expr: Expression) -> Element {
         Expression::StarredElement(inner_expr) => Element::Starred(inner_expr),
         _ => Element::Simple {
             value: expr,
-            comma: Default::default(),
         },
     }
 }
@@ -2088,8 +2074,6 @@ fn make_tuple<'a>(
 
     Tuple {
         elements,
-        lpar,
-        rpar,
     }
 }
 
@@ -2097,8 +2081,6 @@ fn make_tuple_from_elements<'a>(first: Element<'a>, mut rest: Vec<Element<'a>>) 
     rest.insert(0, first);
     Tuple {
         elements: rest,
-        lpar: Default::default(),
-        rpar: Default::default(),
     }
 }
 
@@ -2111,23 +2093,17 @@ fn make_kwarg<'a>(name: Name<'a>, eq: TokenRef<'a>, value: Expression<'a>) -> Ar
         equal,
         comma: None,
         star: "",
-        whitespace_after_star: Default::default(),
-        whitespace_after_arg: Default::default(),
-        star_tok: None,
     }
 }
 
 fn make_star_arg<'a>(star: TokenRef<'a>, expr: Expression<'a>) -> Arg<'a> {
-    let str = star.string;
+    let str = star.text;
     Arg {
         value: expr,
         keyword: None,
         equal: None,
         comma: None,
         star: str,
-        whitespace_after_star: Default::default(),
-        whitespace_after_arg: Default::default(),
-        star_tok: Some(star),
     }
 }
 
@@ -2144,12 +2120,6 @@ fn make_call<'a>(
     Call {
         func,
         args,
-        lpar,
-        rpar,
-        whitespace_after_func: Default::default(),
-        whitespace_before_args: Default::default(),
-        lpar_tok,
-        rpar_tok,
     }
 }
 
@@ -2164,9 +2134,7 @@ fn make_genexp_call<'a>(func: Expression<'a>, mut genexp: GeneratorExp<'a>) -> C
     // parenthesis from genexp, since now Call will own them.
 
     let mut lpars = genexp.lpar.into_iter();
-    let lpar_tok = lpars.next().expect("genexp without lpar").lpar_tok;
     genexp.lpar = lpars.collect();
-    let rpar_tok = genexp.rpar.pop().expect("genexp without rpar").rpar_tok;
 
     Call {
         func: Box::new(func),
@@ -2176,16 +2144,7 @@ fn make_genexp_call<'a>(func: Expression<'a>, mut genexp: GeneratorExp<'a>) -> C
             equal: None,
             comma: None,
             star: "",
-            whitespace_after_star: Default::default(),
-            whitespace_after_arg: Default::default(),
-            star_tok: None,
         }],
-        lpar: vec![],
-        rpar: vec![],
-        whitespace_after_func: Default::default(),
-        whitespace_before_args: Default::default(),
-        lpar_tok,
-        rpar_tok,
     }
 }
 
@@ -2196,17 +2155,12 @@ fn make_arg(expr: Expression) -> Arg {
         equal: Default::default(),
         comma: Default::default(),
         star: Default::default(),
-        whitespace_after_star: Default::default(),
-        whitespace_after_arg: Default::default(),
-        star_tok: None,
     }
 }
 
 fn make_comp_if<'a>(if_tok: TokenRef<'a>, test: Expression<'a>) -> CompIf<'a> {
     CompIf {
         test,
-        whitespace_before: Default::default(),
-        whitespace_before_test: Default::default(),
         if_tok,
     }
 }
@@ -2221,7 +2175,6 @@ fn make_for_if<'a>(
 ) -> CompFor<'a> {
     let inner_for_in = None;
     let asynchronous = async_tok.as_ref().map(|_| Asynchronous {
-        whitespace_after: Default::default(),
     });
 
     CompFor {
@@ -2230,13 +2183,7 @@ fn make_for_if<'a>(
         ifs,
         inner_for_in,
         asynchronous,
-        whitespace_before: Default::default(),
-        whitespace_after_for: Default::default(),
-        whitespace_before_in: Default::default(),
-        whitespace_after_in: Default::default(),
-        async_tok,
-        for_tok,
-        in_tok,
+
     }
 }
 
@@ -2244,8 +2191,7 @@ fn make_bare_genexp<'a>(elt: Expression<'a>, for_in: CompFor<'a>) -> GeneratorEx
     GeneratorExp {
         elt: Box::new(elt),
         for_in: Box::new(for_in),
-        lpar: Default::default(),
-        rpar: Default::default(),
+
     }
 }
 
@@ -2261,28 +2207,24 @@ fn merge_comp_fors(comp_fors: Vec<CompFor>) -> CompFor {
 
 fn make_left_bracket(tok: TokenRef) -> LeftSquareBracket {
     LeftSquareBracket {
-        whitespace_after: Default::default(),
         tok,
     }
 }
 
 fn make_right_bracket(tok: TokenRef) -> RightSquareBracket {
     RightSquareBracket {
-        whitespace_before: Default::default(),
         tok,
     }
 }
 
 fn make_left_brace(tok: TokenRef) -> LeftCurlyBrace {
     LeftCurlyBrace {
-        whitespace_after: Default::default(),
         tok,
     }
 }
 
 fn make_right_brace(tok: TokenRef) -> RightCurlyBrace {
     RightCurlyBrace {
-        whitespace_before: Default::default(),
         tok,
     }
 }
@@ -2296,10 +2238,7 @@ fn make_list_comp<'a>(
     ListComp {
         elt: Box::new(elt),
         for_in: Box::new(for_in),
-        lbracket,
-        rbracket,
-        lpar: Default::default(),
-        rpar: Default::default(),
+
     }
 }
 
@@ -2312,10 +2251,7 @@ fn make_set_comp<'a>(
     SetComp {
         elt: Box::new(elt),
         for_in: Box::new(for_in),
-        lbrace,
-        rbrace,
-        lpar: Default::default(),
-        rpar: Default::default(),
+
     }
 }
 
@@ -2331,13 +2267,8 @@ fn make_dict_comp<'a>(
         key: Box::new(key),
         value: Box::new(value),
         for_in: Box::new(for_in),
-        lbrace,
-        rbrace,
-        lpar: vec![],
-        rpar: vec![],
-        whitespace_before_colon: Default::default(),
-        whitespace_after_colon: Default::default(),
-        colon_tok,
+
+
     }
 }
 
@@ -2348,10 +2279,7 @@ fn make_list<'a>(
 ) -> List<'a> {
     List {
         elements,
-        lbracket,
-        rbracket,
-        lpar: Default::default(),
-        rpar: Default::default(),
+
     }
 }
 
@@ -2362,10 +2290,6 @@ fn make_set<'a>(
 ) -> Set<'a> {
     Set {
         elements,
-        lbrace,
-        rbrace,
-        lpar: Default::default(),
-        rpar: Default::default(),
     }
 }
 
@@ -2397,10 +2321,6 @@ fn make_dict<'a>(
 ) -> Dict<'a> {
     Dict {
         elements,
-        lbrace,
-        rbrace,
-        lpar: Default::default(),
-        rpar: Default::default(),
     }
 }
 
@@ -2429,10 +2349,6 @@ fn make_dict_element<'a>(el: (Expression<'a>, TokenRef<'a>, Expression<'a>)) -> 
     DictElement::Simple {
         key,
         value,
-        comma: Default::default(),
-        whitespace_before_colon: Default::default(),
-        whitespace_after_colon: Default::default(),
-        colon_tok,
     }
 }
 
@@ -2442,9 +2358,6 @@ fn make_double_starred_element<'a>(
 ) -> StarredDictElement<'a> {
     StarredDictElement {
         value,
-        comma: Default::default(),
-        whitespace_before_value: Default::default(),
-        star_tok,
     }
 }
 
@@ -2456,9 +2369,6 @@ fn make_colon(tok: TokenRef) -> Colon {
     let whitespace_before = Default::default();
     let whitespace_after = Default::default();
     Colon {
-        whitespace_before,
-        whitespace_after,
-        tok,
     }
 }
 
@@ -2478,8 +2388,6 @@ fn make_slice<'a>(
         lower,
         upper,
         step,
-        first_colon,
-        second_colon,
     }))
 }
 
@@ -2499,7 +2407,6 @@ fn make_slices<'a>(
     }
     elements.push(SubscriptElement {
         slice: current,
-        comma: trailing_comma,
     });
     elements
 }
@@ -2514,12 +2421,7 @@ fn make_subscript<'a>(
     Subscript {
         value: Box::new(value),
         slice,
-        lbracket,
-        rbracket,
-        lpar: Default::default(),
-        rpar: Default::default(),
-        whitespace_after_value: Default::default(),
-        lbracket_tok,
+
     }
 }
 
@@ -2534,14 +2436,7 @@ fn make_ifexp<'a>(
         test: Box::new(test),
         body: Box::new(body),
         orelse: Box::new(orelse),
-        lpar: Default::default(),
-        rpar: Default::default(),
-        whitespace_before_if: Default::default(),
-        whitespace_after_if: Default::default(),
-        whitespace_before_else: Default::default(),
-        whitespace_after_else: Default::default(),
-        if_tok,
-        else_tok,
+
     }
 }
 
@@ -2657,9 +2552,7 @@ fn make_global<'a>(
     });
     Global {
         names,
-        whitespace_after_global: Default::default(),
-        semicolon: Default::default(),
-        tok,
+
     }
 }
 
@@ -2826,11 +2719,9 @@ fn make_fstring_expression<'a>(
         expression,
         conversion,
         format_spec,
-        whitespace_before_expression: Default::default(),
-        whitespace_after_expression: Default::default(),
+
         equal,
-        lbrace_tok,
-        after_expr_tok,
+
     }
 }
 
@@ -2843,8 +2734,7 @@ fn make_fstring<'a>(
         start,
         parts,
         end,
-        lpar: Default::default(),
-        rpar: Default::default(),
+
     }
 }
 
@@ -2855,10 +2745,7 @@ fn make_finally<'a>(
 ) -> Finally<'a> {
     Finally {
         body,
-        leading_lines: Default::default(),
-        whitespace_before_colon: Default::default(),
-        finally_tok,
-        colon_tok,
+
     }
 }
 
@@ -2875,11 +2762,7 @@ fn make_except<'a>(
         body,
         r#type: exp,
         name,
-        leading_lines: Default::default(),
-        whitespace_after_except: Default::default(),
-        whitespace_before_colon: Default::default(),
-        except_tok,
-        colon_tok,
+
     }
 }
 
