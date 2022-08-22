@@ -93,7 +93,7 @@ pub struct ValueNode {
 // }
 
 parser! {
-    pub grammar python<'a>(input: &'a str) for TokVec<'a> {
+    pub grammar python<'a>() for TokVec<'a> {
 
 
         //Starting rules
@@ -141,7 +141,7 @@ parser! {
         #[cache]
         rule simple_stmt() -> SmallStatement<'a>
         = assignment()
-        / e:star_expressions() { SmallStatement::Expr(Expr { value: e, semicolon: None }) }
+        / e:star_expressions() { SmallStatement::Expr(Expr { value: e,  }) }
             / &lit("return") s:return_stmt() { SmallStatement::Return(s) }
             // this is expanded from the original grammar's import_stmt rule
             / &lit("import") i:import_name() { SmallStatement::Import(i) }
@@ -2069,9 +2069,6 @@ fn make_tuple<'a>(
 ) -> Tuple<'a> {
     let elements = comma_separate(first, rest, trailing_comma);
 
-    let lpar = lpar.map(|l| vec![l]).unwrap_or_default();
-    let rpar = rpar.map(|r| vec![r]).unwrap_or_default();
-
     Tuple {
         elements,
     }
@@ -2440,10 +2437,7 @@ fn add_arguments_trailing_comma<'a>(
     mut args: Vec<Arg<'a>>,
     trailing_comma: Option<Comma>,
 ) -> Vec<Arg<'a>> {
-    if let Some(comma) = trailing_comma {
-        let last = args.pop().unwrap();
-        args.push(last.with_comma(comma));
-    }
+
     args
 }
 
@@ -2626,9 +2620,6 @@ fn make_class_def<'a>(
 ) -> std::result::Result<ClassDef<'a>, &'static str> {
     let mut bases = vec![];
     let mut keywords = vec![];
-    let mut parens_tok = None;
-    let mut lpar = None;
-    let mut rpar = None;
 
     if let Some((lpar_, args, rpar_)) = args {
         // parens_tok = Some((lpar_.lpar_tok.clone(), rpar_.rpar_tok.clone()));
@@ -2664,7 +2655,7 @@ fn make_class_def<'a>(
 
 fn make_string(tok: TokenRef) -> String {
     String::Simple(SimpleString {
-        value: tok.string,
+        value: tok.text,
         ..Default::default()
     })
 }
@@ -2999,8 +2990,7 @@ fn make_or_pattern<'a>(
     });
     MatchPattern::Or(Box::new(MatchOr {
         patterns,
-        lpar: Default::default(),
-        rpar: Default::default(),
+
     }))
 }
 
@@ -3025,8 +3015,7 @@ fn make_tuple_pattern<'a>(
 ) -> MatchSequence<'a> {
     MatchSequence::MatchTuple(MatchTuple {
         patterns,
-        lpar: vec![lpar],
-        rpar: vec![rpar],
+
     })
 }
 
@@ -3035,23 +3024,20 @@ fn make_open_sequence_pattern<'a>(
     comma: Comma,
     mut rest: Vec<StarrableMatchSequenceElement<'a>>,
 ) -> Vec<StarrableMatchSequenceElement<'a>> {
-    rest.insert(0, first.with_comma(comma));
+    rest.insert(0, first);
     rest
 }
 
 fn make_match_sequence_element(value: MatchPattern) -> MatchSequenceElement {
     MatchSequenceElement {
         value,
-        comma: Default::default(),
     }
 }
 
 fn make_match_star<'a>(star_tok: TokenRef<'a>, name: Option<Name<'a>>) -> MatchStar<'a> {
     MatchStar {
         name,
-        comma: Default::default(),
-        whitespace_before_name: Default::default(),
-        star_tok,
+
     }
 }
 
@@ -3065,21 +3051,13 @@ fn make_match_mapping<'a>(
     rbrace: RightCurlyBrace<'a>,
 ) -> MatchPattern<'a> {
     if let Some(c) = el_comma {
-        if let Some(el) = elements.pop() {
-            elements.push(el.with_comma(c));
-        }
+
         // TODO: else raise error
     }
     MatchPattern::Mapping(MatchMapping {
         elements,
         rest,
-        trailing_comma,
-        lbrace,
-        rbrace,
-        lpar: Default::default(),
-        rpar: Default::default(),
-        whitespace_before_rest: Default::default(),
-        star_tok,
+
     })
 }
 
@@ -3091,10 +3069,7 @@ fn make_match_mapping_element<'a>(
     MatchMappingElement {
         key,
         pattern,
-        comma: Default::default(),
-        whitespace_before_colon: Default::default(),
-        whitespace_after_colon: Default::default(),
-        colon_tok,
+
     }
 }
 
@@ -3123,13 +3098,7 @@ fn make_class_pattern<'a>(
         cls,
         patterns,
         kwds,
-        lpar: Default::default(),
-        rpar: Default::default(),
-        whitespace_after_cls: Default::default(),
-        whitespace_before_patterns: Default::default(),
-        whitespace_after_kwds: Default::default(),
-        lpar_tok,
-        rpar_tok,
+
     })
 }
 
