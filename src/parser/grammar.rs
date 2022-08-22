@@ -2113,8 +2113,7 @@ fn make_call<'a>(
     args: Vec<Arg<'a>>,
     rpar_tok: TokenRef<'a>,
 ) -> Call<'a> {
-    let lpar = vec![];
-    let rpar = vec![];
+
     let func = Box::new(func);
 
     Call {
@@ -2133,8 +2132,7 @@ fn make_genexp_call<'a>(func: Expression<'a>, mut genexp: GeneratorExp<'a>) -> C
     // again, to be converted into whitespace_after_func. We then split off a pair of
     // parenthesis from genexp, since now Call will own them.
 
-    let mut lpars = genexp.lpar.into_iter();
-    genexp.lpar = lpars.collect();
+
 
     Call {
         func: Box::new(func),
@@ -2366,10 +2364,8 @@ fn make_index(value: Expression) -> BaseSlice {
 }
 
 fn make_colon(tok: TokenRef) -> Colon {
-    let whitespace_before = Default::default();
-    let whitespace_after = Default::default();
-    Colon {
-    }
+
+    Colon {}
 }
 
 fn make_slice<'a>(
@@ -2635,9 +2631,9 @@ fn make_class_def<'a>(
     let mut rpar = None;
 
     if let Some((lpar_, args, rpar_)) = args {
-        parens_tok = Some((lpar_.lpar_tok.clone(), rpar_.rpar_tok.clone()));
-        lpar = Some(lpar_);
-        rpar = Some(rpar_);
+        // parens_tok = Some((lpar_.lpar_tok.clone(), rpar_.rpar_tok.clone()));
+        // lpar = Some(lpar_);
+        // rpar = Some(rpar_);
         if let Some(args) = args {
             let mut current_arg = &mut bases;
             let mut seen_keyword = false;
@@ -2780,13 +2776,7 @@ fn make_except_star<'a>(
         body,
         r#type: exp,
         name,
-        leading_lines: Default::default(),
-        whitespace_after_except: Default::default(),
-        whitespace_after_star: Default::default(),
-        whitespace_before_colon: Default::default(),
-        except_tok,
-        colon_tok,
-        star_tok,
+
     }
 }
 
@@ -2802,9 +2792,7 @@ fn make_try<'a>(
         handlers,
         orelse,
         finalbody,
-        leading_lines: Default::default(),
-        whitespace_before_colon: Default::default(),
-        try_tok,
+
     }
 }
 
@@ -2831,71 +2819,19 @@ fn make_aug_op(tok: TokenRef) -> Result<AugOp> {
     let whitespace_after = Default::default();
 
     Ok(match tok.string {
-        "+=" => AugOp::AddAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        "-=" => AugOp::SubtractAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        "*=" => AugOp::MultiplyAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        "@=" => AugOp::MatrixMultiplyAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        "/=" => AugOp::DivideAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        "%=" => AugOp::ModuloAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        "&=" => AugOp::BitAndAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        "|=" => AugOp::BitOrAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        "^=" => AugOp::BitXorAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        "<<=" => AugOp::LeftShiftAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        ">>=" => AugOp::RightShiftAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        "**=" => AugOp::PowerAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
-        "//=" => AugOp::FloorDivideAssign {
-            whitespace_before,
-            whitespace_after,
-            tok,
-        },
+        "+=" => AugOp::AddAssign {},
+        "-=" => AugOp::SubtractAssign {},
+        "*=" => AugOp::MultiplyAssign {},
+        "@=" => AugOp::MatrixMultiplyAssign {},
+        "/=" => AugOp::DivideAssign {},
+        "%=" => AugOp::ModuloAssign {},
+        "&=" => AugOp::BitAndAssign {},
+        "|=" => AugOp::BitOrAssign {},
+        "^=" => AugOp::BitXorAssign {},
+        "<<=" => AugOp::LeftShiftAssign {},
+        ">>=" => AugOp::RightShiftAssign {},
+        "**=" => AugOp::PowerAssign {},
+        "//=" => AugOp::FloorDivideAssign {},
         _ => return Err(ParserError::OperatorError),
     })
 }
