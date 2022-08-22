@@ -165,7 +165,9 @@ impl <'a> Processor<'a>  {
         let mut buffer: String = String::new();
         let _file = File::open(fname).unwrap().read_to_string(&mut buffer);
 
-        let lines = buffer.split(&NLSYM).map(|l| format!("{}\n", l).as_str()).collect();
+        buffer.replace(NLSYM, "\n");
+
+        let lines = buffer.split(&NLSYM).map(|l|format!("{}\n", l).as_str()).into_iter().collect();
 
         return Processor::initialize(lines, module_name);
 
@@ -173,8 +175,8 @@ impl <'a> Processor<'a>  {
 
     pub fn tokenize_file<P>(fname: P, module_name: Option<&str>, skip_encoding: bool) -> Vec<Token>
         where P: AsRef<std::path::Path>,    {
-        let mut engine = Processor::consume_file(fname, Some(module_name.unwrap().to_string()));
-        return engine.run(skip_encoding).expect("tokens");
+        let outcome = Processor::consume_file(fname, Some(module_name.unwrap().to_string())).run(skip_encoding);
+        return outcome.expect("tokens").clone();
 
     }
 
@@ -382,7 +384,7 @@ impl <'a> Processor<'a>  {
                             product.push(
                                 Token::Make(
                                     TType::String,
-                                        self.string_start,
+                                        self.string_start.clone(),
                                     Position::t((current_idx, lineno)),
                                  self.string_buffer_content.as_str()
                                 )
