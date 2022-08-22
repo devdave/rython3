@@ -297,7 +297,7 @@ impl <'a> Processor<'a>  {
         return Ok(body);
     }
 
-    fn process_line(&mut self, line: &mut ManagedLine<'a>) -> Result<Vec<Token<'a>>, TokError> {
+    fn process_line(&'a mut self, line: &'a mut ManagedLine<'a>) -> Result<Vec<Token<'a>>, TokError> {
 
 
         let mut product: Vec<Token> = Vec::new();
@@ -379,12 +379,15 @@ impl <'a> Processor<'a>  {
                     StringType::SINGLE => {
                         if let Some((current_idx, match_str)) = line.test_and_return(&SINGLE_APOSTROPHE_PRECONTENT){
                             self.string_buffer_content.push_str(match_str);
-                            product.push(Token::Make(
-                                TType::String,
-                                self.string_start,
-                                Position::t((current_idx, lineno)),
-                                self.string_buffer_content.as_str()
-                            ));
+                            product.push(
+                                Token::Make(
+                                    TType::String,
+                                        self.string_start,
+                                    Position::t((current_idx, lineno)),
+                                 self.string_buffer_content.as_str()
+                                )
+                            );
+
                             self.string_continues = false;
                         } else {
                             return Err(TokError::UnterminatedString);

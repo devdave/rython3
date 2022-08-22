@@ -9,7 +9,7 @@ pub struct AssignEqual<'a> {
 }
 
 
-
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum AugOp {
     AddAssign,
     SubtractAssign,

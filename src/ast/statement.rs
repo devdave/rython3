@@ -3,11 +3,13 @@ use std::rc::Rc;
 
 use crate::tokenizer::Token;
 
-use super::expression::{Arg, AssignTargetExpression, Asynchronous, Expression, From, Parameters, StarredElement, Tuple, List, Subscript, Name, NameOrAttribute };
+use super::expression::{Arg, AssignTargetExpression, Asynchronous, Expression, From, Parameters, StarredElement, Tuple, List, Subscript, Name, NameOrAttribute, Comma };
 use super::op::{ AugOp, AssignEqual, BitOr, ImportStar};
+use super::traits::WithComma;
 
 type TokenRef<'a> = Rc<Token<'a>>;
 
+#[derive(Clone, PartialEq, Debug)]
 pub struct AugAssign<'a> {
     pub target: AssignTargetExpression<'a>,
     pub operator: AugOp,
@@ -15,7 +17,7 @@ pub struct AugAssign<'a> {
 }
 
 
-
+#[derive(PartialEq, Debug)]
 pub enum CompoundStatement<'a> {
     FunctionDef(FunctionDef<'a>),
     If(If<'a>),
@@ -28,6 +30,7 @@ pub enum CompoundStatement<'a> {
     Match(Match<'a>),
 }
 
+#[derive(Eq, PartialEq, Default, Debug)]
 pub struct ClassDef<'a> {
     pub name: Name<'a>,
     pub body: Suite<'a>,
@@ -36,6 +39,13 @@ pub struct ClassDef<'a> {
     pub decorators: Vec<Decorator<'a>>,
 }
 
+impl<'a> ClassDef<'a> {
+    pub fn with_decorators(self, decorators: Vec<Decorator<'a>>) -> Self {
+        Self { decorators, ..self }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct FunctionDef<'a> {
     pub name: Name<'a>,
     pub params: Parameters<'a>,
@@ -46,6 +56,13 @@ pub struct FunctionDef<'a> {
 
 }
 
+impl<'a> FunctionDef<'a> {
+    pub fn with_decorators(self, decorators: Vec<Decorator<'a>>) -> Self {
+        Self { decorators, ..self }
+    }
+}
+
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct For<'a> {
     pub target: AssignTargetExpression<'a>,
     pub iter: Expression<'a>,
@@ -54,10 +71,12 @@ pub struct For<'a> {
     pub asynchronous: Option<Asynchronous,>,
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Global<'a> {
     pub names: Vec<NameItem<'a>>,
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct If<'a> {
     /// The expression that, when evaluated, should give us a truthy value
     pub test: Expression<'a>,
@@ -69,7 +88,7 @@ pub struct If<'a> {
     pub is_elif: bool,
 }
 
-
+#[derive(Clone, PartialEq, Debug)]
 pub enum ImportNames<'a> {
     Star(ImportStar),
     Aliases(Vec<ImportAlias<'a>>),
@@ -79,7 +98,7 @@ pub enum ImportNames<'a> {
 //     /// Sequence of statements belonging to this indented block.
 //     pub body: Vec<Statement<'a>>,
 // }
-
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Match<'a> {
     pub subject: Expression<'a>,
     pub cases: Vec<MatchCase<'a>>,
@@ -186,6 +205,7 @@ pub enum Statement<'a> {
     Compound(CompoundStatement<'a>),
 }
 
+#[derive(Clone, PartialEq, Debug)]
 pub enum Suite<'a> {
     IndentedBlock(IndentedBlock<'a>),
     SimpleStatementSuite(SimpleStatementSuite<'a>),
@@ -196,12 +216,14 @@ pub struct SimpleStatementLine<'a> {
     pub body: Vec<SmallStatement<'a>>,
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct SimpleStatementSuite<'a> {
     /// Sequence of small statements. All but the last statement are required to have
     /// a semicolon.
     pub body: Vec<SmallStatement<'a>>,
 }
 
+#[derive(Clone, PartialEq, Debug)]
 pub enum SmallStatement<'a> {
     Pass,
     //TODO double check that Python doesn't have named break/continues
@@ -226,15 +248,18 @@ pub enum StarrableMatchSequenceElement<'a> {
     Starred(MatchStar<'a>),
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Raise<'a> {
     pub exc: Option<Expression<'a>>,
     pub cause: Option<From<'a>>,
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Return<'a> {
     pub value: Option<Expression<'a>>,
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Try<'a> {
     pub body: Suite<'a>,
     pub handlers: Vec<ExceptHandler<'a>>,
@@ -242,6 +267,7 @@ pub struct Try<'a> {
     pub finalbody: Option<Finally<'a>>,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct TryStar<'a> {
     pub body: Suite<'a>,
     pub handlers: Vec<ExceptStarHandler<'a>>,
@@ -249,6 +275,7 @@ pub struct TryStar<'a> {
     pub finalbody: Option<Finally<'a>>,
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Expr<'a> {
     pub value: Expression<'a>,
 }
@@ -264,10 +291,12 @@ pub struct Annotation<'a> {
     pub annotation: Expression<'a>,
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct AsName<'a> {
     pub name: AssignTargetExpression<'a>,
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Assert<'a> {
     pub test: Expression<'a>,
     pub msg: Option<Expression<'a>>,
@@ -332,6 +361,7 @@ pub enum DelTargetExpression<'a> {
 
 pub struct Dot { }
 
+#[derive(Default, PartialEq, Debug)]
 pub struct Else<'a> {
     pub body: Suite<'a>,
 }
@@ -342,35 +372,39 @@ pub struct ExceptHandler<'a> {
     pub name: Option<AsName<'a>>,
 }
 
+#[derive(Default, PartialEq, Debug)]
 pub struct ExceptStarHandler<'a> {
     pub body: Suite<'a>,
     pub r#type: Expression<'a>,
     pub name: Option<AsName<'a>>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Finally<'a> {
     pub body: Suite<'a>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct While<'a> {
     pub test: Expression<'a>,
     pub body: Suite<'a>,
     pub orelse: Option<Else<'a>>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct With<'a> {
     pub items: Vec<WithItem<'a>>,
     pub body: Suite<'a>,
     pub asynchronous: Option<Asynchronous,>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct WithItem<'a> {
     pub item: Expression<'a>,
     pub asname: Option<AsName<'a>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-
 pub struct IndentedBlock<'a> {
     /// Sequence of statements belonging to this indented block.
     pub body: Vec<Statement<'a>>,
@@ -385,4 +419,78 @@ pub struct IndentedBlock<'a> {
     pub(crate) newline_tok: TokenRef<'a>,
     pub(crate) indent_tok: TokenRef<'a>,
     pub(crate) dedent_tok: TokenRef<'a>,
+}
+
+impl<'a> WithComma<'a> for ImportAlias<'a> {
+    fn with_comma(self, comma: Comma) -> ImportAlias<'a> {
+
+        Self { ..self }
+    }
+}
+
+impl<'a> WithComma<'a> for MatchMappingElement<'a> {
+    fn with_comma(self, comma: Comma) -> Self {
+        Self {
+
+            ..self
+        }
+    }
+}
+
+impl<'a> WithComma<'a> for MatchSequenceElement<'a> {
+    fn with_comma(self, comma: Comma) -> Self {
+        Self {
+
+            ..self
+        }
+    }
+}
+
+impl<'a> WithComma<'a> for MatchStar<'a> {
+    fn with_comma(self, comma: Comma) -> Self {
+        Self {
+
+            ..self
+        }
+    }
+}
+
+impl<'a> WithComma<'a> for StarrableMatchSequenceElement<'a> {
+    fn with_comma(self, comma: Comma) -> Self {
+        match self {
+            Self::Simple(s) => Self::Simple(s.with_comma(comma)),
+            Self::Starred(s) => Self::Starred(s.with_comma(comma)),
+        }
+    }
+}
+
+impl<'a> WithComma<'a> for WithItem<'a> {
+    fn with_comma(self, comma: Comma) -> Self {
+        Self {
+
+            ..self
+        }
+    }
+}
+
+impl<'a> WithComma<'a> for MatchKeywordElement<'a> {
+    fn with_comma(self, comma: Comma) -> Self {
+        Self {
+
+            ..self
+        }
+    }
+}
+
+
+impl<'a> std::convert::From<DelTargetExpression<'a>> for Expression<'a> {
+    fn from(d: DelTargetExpression<'a>) -> Self {
+        match d {
+            DelTargetExpression::Attribute(a) => Expression::Attribute(a),
+            DelTargetExpression::List(l) => Expression::List(l),
+            DelTargetExpression::Name(n) => Expression::Name(n),
+            DelTargetExpression::Subscript(s) => Expression::Subscript(s),
+            DelTargetExpression::Tuple(t) => Expression::Tuple(t),
+        }
+    }
 }

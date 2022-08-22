@@ -13,7 +13,7 @@ impl <'a> ModuleLines<'a> {
 
     pub fn Make(lines: Vec<&'a str>, name: String) -> Self {
 
-        let managed: Vec<ManagedLine> = lines.iter().enumerate().map(|(lineno, content)| ManagedLine::Make(lineno,content.to_string())).collect();
+        let managed: Vec<ManagedLine> = lines.iter().enumerate().map(|(lineno, content)| ManagedLine::Make(lineno,content )).collect();
         Self {
             idx: 0,
             name: name,
@@ -26,7 +26,7 @@ impl <'a> ModuleLines<'a> {
     }
 
     pub fn set_lines(&mut self, lines: Vec<String>, name: String) {
-        let managed: Vec<ManagedLine> = lines.iter().enumerate().map(|(lineno, content)| ManagedLine::Make(lineno,content.to_string())).collect();
+        let managed: Vec<ManagedLine> = lines.iter().enumerate().map(|(lineno, content)| ManagedLine::Make(lineno,content)).collect();
         self.name = name;
         self.content = managed;
     }
@@ -47,7 +47,7 @@ impl <'a> ModuleLines<'a> {
     pub fn get(&mut self) -> Option<ManagedLine> {
         if self.idx < self.content.len() {
             let retval = self.content.get(self.idx).unwrap();
-            let duplicate = ManagedLine::Make(retval.lineno, retval.text.to_string());
+            let duplicate = ManagedLine::Make(retval.lineno, retval.text);
             self.idx += 1;
             return Some(duplicate);
         } else {

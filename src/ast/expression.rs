@@ -8,18 +8,22 @@ use super::op::{
 
 use super::statement::Annotation;
 
+use super::traits::WithComma;
+
 type TokenRef<'a> = Rc<Token<'a>>;
 
 // Atomic nodes
-
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Comma {
 
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Name<'a> {
     pub value: &'a str,
 }
 
+#[derive(Clone, PartialEq, Debug)]
 pub enum NameOrAttribute<'a> {
     N(Box<Name<'a>>),
     A(Box<Attribute<'a>>),
@@ -57,22 +61,25 @@ pub struct BooleanOperation<'a> {
     pub rpar: Vec<RightParen<'a>>,
 }
 
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Hexidecimal<'a> {
     pub value: &'a str,
 }
 
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Imaginary<'a> {
     pub value: &'a str,
 }
 
 // Semi-atomic/more complex nodes
-
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Comparison<'a> {
     // kind of surprised Rust lets me make this recursive/orobus pattern
     pub left: Box<Expression<'a>>,
     pub comparisons: Vec<ComparisonTarget<'a>>,
 }
 
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct ComparisonTarget<'a> {
     pub operator: CompOp,
     pub comparator: Expression<'a>,
@@ -87,6 +94,7 @@ pub enum Element<'a> {
     Starred(Box<StarredElement<'a>>),
 }
 
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct StarredElement<'a> {
     pub value: Box<Expression<'a>>,
 }
@@ -97,6 +105,7 @@ pub struct StarredElement<'a> {
 
 // Composite nodes
 
+#[derive(Clone, PartialEq, Debug)]
 pub enum Expression<'a> {
     Name(Box<Name<'a>>),
     Ellipsis,
@@ -132,6 +141,7 @@ pub enum Expression<'a> {
 
 }
 
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Arg<'a> {
     pub value: Expression<'a>,
     pub keyword: Option<Name<'a>>,
@@ -140,16 +150,18 @@ pub struct Arg<'a> {
     pub star: &'a str,
 }
 
-
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Attribute<'a> {
     pub value: Box<Expression<'a>>,
     pub attr: Name<'a>,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Tuple<'a> {
     pub elements: Vec<Element<'a>>,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Call<'a> {
     pub func: Box<Expression<'a>>,
     pub args: Vec<Arg<'a>>,
@@ -186,6 +198,7 @@ pub struct CompIf<'a> {
 //     IsNot,
 // }
 
+#[derive(Clone, PartialEq, Debug)]
 pub enum AssignTargetExpression<'a> {
     Name(Box<Name<'a>>),
     Attribute(Box<Attribute<'a>>),
@@ -280,11 +293,34 @@ pub struct Parameters<'a> {
     pub posonly_ind: Option<ParamSlash>,
 }
 
+impl<'a> Parameters<'a> {
+    pub fn is_empty(&self) -> bool {
+        self.params.is_empty()
+            && self.star_arg.is_none()
+            && self.kwonly_params.is_empty()
+            && self.star_kwarg.is_none()
+            && self.posonly_params.is_empty()
+            && self.posonly_ind.is_none()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Param<'a> {
     pub name: Name<'a>,
     pub annotation: Option<Annotation<'a>>,
     pub equal: Option<AssignEqual<'a>>,
     pub default: Option<Expression<'a>>,
+}
+
+impl<'a> Default for Param<'a> {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            annotation: None,
+            equal: None,
+            default: None,
+        }
+    }
 }
 
 pub struct ParamStar {}
@@ -315,6 +351,7 @@ pub struct Await<'a> {
     pub expression: Box<Expression<'a>>,
 }
 
+#[derive(Default, PartialEq, Debug)]
 pub struct Asynchronous {
 
 }
@@ -396,3 +433,63 @@ pub struct LeftParen<'a> {
     pub(crate) tok: TokenRef<'a>,
 }
 
+
+// Converters
+
+impl<'a> std::convert::From<Expression<'a>> for Element<'a> {
+    fn from(e: Expression<'a>) -> Self {
+        match e {
+            Expression::StarredElement(e) => Element::Starred(e),
+            value => Element::Simple { value, comma: None },
+        }
+    }
+}
+
+impl<'a> std::convert::From<NameOrAttribute<'a>> for Expression<'a> {
+    fn from(x: NameOrAttribute<'a>) -> Self {
+        match x {
+            NameOrAttribute::N(n) => Self::Name(n),
+            NameOrAttribute::A(a) => Self::Attribute(a),
+        }
+    }
+}
+
+impl<'a> std::convert::From<String<'a>> for Expression<'a> {
+    fn from(s: String<'a>) -> Self {
+        match s {
+            String::Simple(s) => Self::SimpleString(Box::new(s)),
+            String::Concatenated(s) => Self::ConcatenatedString(Box::new(s)),
+            String::Formatted(s) => Self::FormattedString(Box::new(s)),
+        }
+    }
+}
+
+impl<'a> WithComma<'a> for Arg<'a> {
+    fn with_comma(self, c: Comma) -> Self {
+        Self {
+            comma: Some(c),
+            ..self
+        }
+    }
+}
+
+impl<'a> WithComma<'a> for DictElement<'a> {
+    fn with_comma(self, comma: Comma) -> Self {
+
+        match self {
+            Self::Starred(s) => Self::Starred(StarredDictElement { ..s }),
+            Self::Simple { key, value,  .. } => Self::Simple { key, value, },
+        }
+    }
+}
+
+
+impl<'a> WithComma<'a> for Element<'a> {
+    fn with_comma(self, comma: Comma) -> Self {
+
+        match self {
+            Self::Simple { value, .. } => Self::Simple { value },
+            Self::Starred(mut s) => { Self::Starred(s) }
+        }
+    }
+}

@@ -123,7 +123,7 @@ parser! {
 
         rule statement() -> Statement<'a>
         = c:compound_stmt() { Statement::Compound(c) }
-        / s:simple_stmt() {
+        / s:simple_stmts() {
             Statement::Simple(make_simple_statement_lines(s))
         }
 
@@ -147,12 +147,12 @@ parser! {
             / &lit("import") i:import_name() { SmallStatement::Import(i) }
             / &lit("from") i:import_from() { SmallStatement::ImportFrom(i) }
             / &lit("raise") r:raise_stmt() { SmallStatement::Raise(r) }
-            / lit("pass") { SmallStatement::Pass() }
+            / lit("pass") { SmallStatement::Pass }
             / &lit("del") s:del_stmt() { SmallStatement::Del(s) }
-            / &lit("yield") s:yield_stmt() { SmallStatement::Expr(Expr { value: s, semicolon: None }) }
+            / &lit("yield") s:yield_stmt() { SmallStatement::Expr(Expr { value: s, }) }
             / &lit("assert") s:assert_stmt() {SmallStatement::Assert(s)}
-            / lit("break") { SmallStatement::Break() }
-            / lit("continue") { SmallStatement::Continue() }
+            / lit("break") { SmallStatement::Break }
+            / lit("continue") { SmallStatement::Continue }
             / &lit("global") s:global_stmt() {SmallStatement::Global(s)}
             / &lit("nonlocal") s:nonlocal_stmt() {SmallStatement::Nonlocal(s)}
 
@@ -203,19 +203,21 @@ parser! {
 
         //Deviates from libcst
         rule augassign() -> AugOp
-            = &(lit("+=") { AugOp::PlusEq }
-                / lit("-=") { AugOp::MinusEq }
-                / lit("*=") { AugOp::MulEq }
-                / lit("@=") { AugOp::MatrixEq }
-                /  lit("/=") { AugOp::DivEq }
-                / lit("%=")  { AugOp::ModulaEq }
-                / lit("&=")  { AugOp::AndEq }
-                / lit("|=") { AugOp::OrEq }
-                / lit("^=") { AugOp::NotEq }
-                / lit("<<=") { AugOp::LeftShitEq }
-                / lit(">>=") { AugOp::RightShiftEq }
-                / lit("**=") { AugOp::ExponentEq }
-                / lit("//=")) { AugOp::FloorDivEq }
+            = &(lit("+=")
+                / lit("-=")
+                / lit("*=")
+                / lit("@=")
+                /  lit("/=")
+                / lit("%=")
+                / lit("&=")
+                / lit("|=")
+                / lit("^=")
+                / lit("<<=")
+                / lit(">>=")
+                / lit("**=")
+                / lit("//=")) tok:_ {?
+                    make_aug_op(tok).map_err(|_| "aug_op")
+        }
 
 
         rule return_stmt() -> Return<'a>
@@ -275,7 +277,7 @@ parser! {
             = lpar:lpar() als:import_from_as_names() c:comma()? rpar:rpar() {
                 let mut als = als;
                 if let (comma@Some(_), Some(mut last)) = (c, als.last_mut()) {
-                    last.comma = comma;
+
                 }
                 (Some(lpar), ImportNames::Aliases(als), Some(rpar))
             }
@@ -293,7 +295,7 @@ parser! {
             }
 
         rule dotted_as_names() -> Vec<ImportAlias<'a>>
-            = init:(d:dotted_as_name() c:comma() {d.with_comma(c)})*
+            = init:(d:dotted_as_name() c:comma() {d})*
                 last:dotted_as_name() {
                     concat(init, vec![last])
             }
@@ -406,7 +408,7 @@ parser! {
                     add_param_star(a, star)))), b, kw)
             }
             / lit("*") c:comma() b:param_maybe_default()+ kw:kwds()? {
-                StarEtc(Some(StarArg::Star(Box::new(ParamStar {comma:c }))), b, kw)
+                StarEtc(Some(StarArg::Star(Box::new(ParamStar { }))), b, kw)
             }
             / kw:kwds() { StarEtc(None, vec![], Some(kw)) }
 
@@ -682,7 +684,7 @@ parser! {
             / n:name() { NameOrAttribute::N(Box::new(n)) }
 
         rule group_pattern() -> MatchPattern<'a>
-            = l:lpar() pat:pattern() r:rpar() { pat.with_parens(l, r) }
+            = l:lpar() pat:pattern() r:rpar() { pat }
 
         rule sequence_pattern() -> MatchPattern<'a>
             = l:lbrak() pats:maybe_sequence_pattern()? r:rbrak() {
@@ -991,7 +993,7 @@ parser! {
             / atom()
 
         rule slices() -> Vec<SubscriptElement<'a>>
-            = s:slice() !lit(",") { vec![SubscriptElement { slice: s, comma: None }] }
+            = s:slice() !lit(",") { vec![SubscriptElement { slice: s, }] }
             / slices:separated_trailer(<slice()>, <comma()>) {
                 make_slices(slices.0, slices.1, slices.2)
             }
@@ -1016,9 +1018,7 @@ parser! {
             / lit("...") { Expression::Ellipsis }
 
         rule group() -> Expression<'a>
-            = lpar:lpar() e:(yield_expr() / named_expression()) rpar:rpar() {
-                e.with_parens(lpar, rpar)
-            }
+            = lpar:lpar() e:(yield_expr() / named_expression()) rpar:rpar() { e }
 
         // Lambda functions
 
@@ -1078,7 +1078,7 @@ parser! {
                     )), b, kw)
             }
             / lit("*") c:comma() b:lambda_param_maybe_default()+ kw:lambda_kwds()? {
-                StarEtc(Some(StarArg::Star(Box::new(ParamStar {comma: c}))), b, kw)
+                StarEtc(Some(StarArg::Star(Box::new(ParamStar { }))), b, kw)
             }
             / kw:lambda_kwds() { StarEtc(None, vec![], Some(kw)) }
 
@@ -1198,7 +1198,7 @@ parser! {
 
         rule genexp() -> GeneratorExp<'a>
             = lpar:lpar() g:_bare_genexp() rpar:rpar() {
-                g.with_parens(lpar, rpar)
+                g
             }
 
         rule _bare_genexp() -> GeneratorExp<'a>
@@ -1315,10 +1315,10 @@ parser! {
 
         rule star_atom() -> AssignTargetExpression<'a>
             = a:name() { AssignTargetExpression::Name(Box::new(a)) }
-            / lpar:lpar() a:target_with_star_atom() rpar:rpar() { a.with_parens(lpar, rpar) }
+            / lpar:lpar() a:target_with_star_atom() rpar:rpar() { a}
             / lpar:lpar() a:star_targets_tuple_seq()? rpar:rpar() {
                AssignTargetExpression::Tuple(Box::new(
-                   a.unwrap_or_default().with_parens(lpar, rpar)
+                   a.unwrap_or_default()
                ))
             }
             / lbrak:lbrak() a:star_targets_list_seq()? rbrak:rbrak() {
@@ -1330,7 +1330,7 @@ parser! {
         rule single_target() -> AssignTargetExpression<'a>
             = single_subscript_attribute_target()
             / n:name() { AssignTargetExpression::Name(Box::new(n)) }
-            / lpar:lpar() t:single_target() rpar:rpar() { t.with_parens(lpar, rpar) }
+            / lpar:lpar() t:single_target() rpar:rpar() { t }
 
         rule single_subscript_attribute_target() -> AssignTargetExpression<'a>
             = a:t_primary() dot:lit(".") n:name() !t_lookahead() {
@@ -1382,7 +1382,7 @@ parser! {
 
         rule del_t_atom() -> DelTargetExpression<'a>
             = n:name() { DelTargetExpression::Name(Box::new(n)) }
-            / l:lpar() d:del_target() r:rpar() { d.with_parens(l, r) }
+            / l:lpar() d:del_target() r:rpar() { d }
             / l:lpar() d:del_targets()? r:rpar() {
                 make_del_tuple(Some(l), d.unwrap_or_default(), Some(r))
             }
@@ -1514,7 +1514,7 @@ parser! {
 //Beginning of adapters
 //##################################################################################################
 
-fn make_module<'a>(body: Vec<Statement<'a>>, tok: TokenRef<'a>) -> Module<'a>{
+fn make_module<'a>(name: &str, body: Vec<Statement<'a>>, tok: TokenRef<'a>) -> Module<'a>{
     Module {
         body,
         default_indent: "    ",
@@ -2394,7 +2394,6 @@ fn make_slices<'a>(
     for (comma, next) in rest {
         elements.push(SubscriptElement {
             slice: current,
-            comma: Some(comma),
         });
         current = next;
     }
@@ -2656,7 +2655,7 @@ fn make_class_def<'a>(
 fn make_string(tok: TokenRef) -> String {
     String::Simple(SimpleString {
         value: tok.text,
-        ..Default::default()
+
     })
 }
 
@@ -2804,8 +2803,7 @@ fn make_try_star<'a>(
 }
 
 fn make_aug_op(tok: TokenRef) -> Result<AugOp> {
-    let whitespace_before = Default::default();
-    let whitespace_after = Default::default();
+
 
     Ok(match tok.text {
         "+=" => AugOp::AddAssign {},
@@ -3084,13 +3082,13 @@ fn make_class_pattern<'a>(
 ) -> MatchPattern<'a> {
     if let Some(c) = pat_comma {
         if let Some(el) = patterns.pop() {
-            patterns.push(el.with_comma(c));
+            patterns.push(el);
         }
         // TODO: else raise error
     }
     if let Some(c) = kwd_comma {
         if let Some(el) = kwds.pop() {
-            kwds.push(el.with_comma(c));
+            kwds.push(el);
         }
         // TODO: else raise error
     }
