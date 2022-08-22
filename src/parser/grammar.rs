@@ -1117,7 +1117,7 @@ parser! {
         // todo deal with + infinite loop here
         rule strings() -> String<'a>
             = s:(str:tok(STRING, "STRING") t:&_ {( make_string(str), t) }
-                / str:fstring() t:&_ {(String::Formatted(str), t)}) {
+                / str:fstring() t:&_ {(String::Formatted(str), t)})+ {
                 make_strings(s)
             }
 
