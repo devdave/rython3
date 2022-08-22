@@ -26,7 +26,6 @@ pub enum AugOp {
     FloorDivideAssign,
 }
 
-pub struct Dot { }
 
 pub enum UnaryOp {
     Plus,
