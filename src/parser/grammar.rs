@@ -2330,7 +2330,7 @@ fn make_double_starred_keypairs<'a>(
     let mut elements = vec![];
     let mut current = first;
     for (comma, next) in rest {
-        elements.push(current.with_comma(comma));
+        elements.push(current);
         current = next;
     }
     // if let Some(mut comma) = trailing_comma {
@@ -2808,9 +2808,7 @@ fn make_try_star<'a>(
         handlers,
         orelse,
         finalbody,
-        leading_lines: Default::default(),
-        whitespace_before_colon: Default::default(),
-        try_tok,
+
     }
 }
 
@@ -2818,7 +2816,7 @@ fn make_aug_op(tok: TokenRef) -> Result<AugOp> {
     let whitespace_before = Default::default();
     let whitespace_after = Default::default();
 
-    Ok(match tok.string {
+    Ok(match tok.text {
         "+=" => AugOp::AddAssign {},
         "-=" => AugOp::SubtractAssign {},
         "*=" => AugOp::MultiplyAssign {},
@@ -2845,7 +2843,6 @@ fn make_aug_assign<'a>(
         target,
         operator,
         value,
-        semicolon: Default::default(),
     }
 }
 
@@ -2862,7 +2859,6 @@ fn make_with_item<'a>(
     WithItem {
         item,
         asname,
-        comma: Default::default(),
     }
 }
 
@@ -2875,30 +2871,19 @@ fn make_with<'a>(
     colon_tok: TokenRef<'a>,
     body: Suite<'a>,
 ) -> With<'a> {
-    let asynchronous = async_tok.as_ref().map(|_| Asynchronous {
-        whitespace_after: Default::default(),
-    });
+    let asynchronous = async_tok.as_ref().map(|_| Asynchronous {});
     With {
         items,
         body,
         asynchronous,
-        leading_lines: Default::default(),
-        lpar,
-        rpar,
-        whitespace_after_with: Default::default(),
-        whitespace_before_colon: Default::default(),
-        async_tok,
-        with_tok,
-        colon_tok,
+
     }
 }
 
 fn make_del<'a>(tok: TokenRef<'a>, target: DelTargetExpression<'a>) -> Del<'a> {
     Del {
         target,
-        whitespace_after_del: Default::default(),
-        semicolon: Default::default(),
-        tok,
+
     }
 }
 
@@ -2909,8 +2894,7 @@ fn make_del_tuple<'a>(
 ) -> DelTargetExpression<'a> {
     DelTargetExpression::Tuple(Box::new(Tuple {
         elements,
-        lpar: lpar.map(|x| vec![x]).unwrap_or_default(),
-        rpar: rpar.map(|x| vec![x]).unwrap_or_default(),
+
     }))
 }
 
@@ -2918,11 +2902,7 @@ fn make_named_expr<'a>(name: Name<'a>, tok: TokenRef<'a>, expr: Expression<'a>) 
     NamedExpr {
         target: Box::new(Expression::Name(Box::new(name))),
         value: Box::new(expr),
-        lpar: Default::default(),
-        rpar: Default::default(),
-        whitespace_before_walrus: Default::default(),
-        whitespace_after_walrus: Default::default(),
-        walrus_tok: tok,
+
     }
 }
 
@@ -2937,16 +2917,7 @@ fn make_match<'a>(
     Match {
         subject,
         cases,
-        leading_lines: Default::default(),
-        whitespace_after_match: Default::default(),
-        whitespace_before_colon: Default::default(),
-        whitespace_after_colon: Default::default(),
-        indent: Default::default(),
-        footer: Default::default(),
-        match_tok,
-        colon_tok,
-        indent_tok,
-        dedent_tok,
+
     }
 }
 
@@ -2965,14 +2936,7 @@ fn make_case<'a>(
         pattern,
         guard,
         body,
-        leading_lines: Default::default(),
-        whitespace_after_case: Default::default(),
-        whitespace_before_if: Default::default(),
-        whitespace_after_if: Default::default(),
-        whitespace_before_colon: Default::default(),
-        case_tok,
-        if_tok,
-        colon_tok,
+
     }
 }
 
@@ -2991,10 +2955,7 @@ fn make_list_pattern<'a>(
 ) -> MatchSequence<'a> {
     MatchSequence::MatchList(MatchList {
         patterns,
-        lbracket,
-        rbracket,
-        lpar: Default::default(),
-        rpar: Default::default(),
+
     })
 }
 
@@ -3006,20 +2967,12 @@ fn make_as_pattern<'a>(
     MatchPattern::As(Box::new(MatchAs {
         pattern,
         name,
-        lpar: Default::default(),
-        rpar: Default::default(),
-        whitespace_before_as: Default::default(),
-        whitespace_after_as: Default::default(),
-        as_tok,
+
     }))
 }
 
 fn make_bit_or(tok: TokenRef) -> BitOr {
-    BitOr {
-        whitespace_before: Default::default(),
-        whitespace_after: Default::default(),
-        tok,
-    }
+    BitOr {}
 }
 
 fn make_or_pattern<'a>(
