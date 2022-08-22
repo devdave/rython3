@@ -823,7 +823,7 @@ mod tests {
 
     #[test]
     fn processor_consume_handles_names() {
-        let mut processor = Processor::initialize(vec!["    def hello_world():".to_string()], Some("__test__".to_string()));
+        let mut processor = Processor::initialize(vec!["    def hello_world():"], Some("__test__".to_string()));
 
         let mut line = processor.module.get().expect("Atleast one line");
 
