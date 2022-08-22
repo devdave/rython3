@@ -70,23 +70,21 @@ impl <'a> ModuleLines<'a> {
     }
 
 }
-
-impl <'a> Iterator for ModuleLines<'a> {
-    type Item = (usize, ManagedLine<'a>);
-
-    fn next(&mut self) -> Option<(usize, ManagedLine<'a>)> {
-
-        if let Some(temp) = self.get(){
-            return Some((self.idx, temp));
-        } else {
-            return None;
-        }
-
-
-
-    }
-
-}
+//
+// impl <'a> Iterator for ModuleLines<'a> {
+//     type Item = (usize, ManagedLine<'a>);
+//
+//     fn next(&mut self) -> Option<(usize, ManagedLine<'a>)> {
+//
+//         if let Some(temp) = self.get(){
+//             return Some((self.idx, temp));
+//         } else {
+//             return None;
+//         }
+//
+//     }
+//
+// }
 
 
 #[cfg(test)]
