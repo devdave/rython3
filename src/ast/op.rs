@@ -4,6 +4,7 @@ use crate::tokenizer::Token;
 
 type TokenRef<'a> = Rc<Token<'a>>;
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AssignEqual<'a> {
     pub(crate) tok: TokenRef<'a>,
 }
@@ -26,7 +27,7 @@ pub enum AugOp {
     FloorDivideAssign,
 }
 
-
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum UnaryOp {
     Plus,
     Minus,
@@ -34,6 +35,7 @@ pub enum UnaryOp {
     Not,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BinaryOp {
     Add,
     Subtract,
@@ -50,25 +52,26 @@ pub enum BinaryOp {
     MatrixMultiply,
 }
 
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct BitOr {}
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BooleanOp {
     And,
     Or,
 }
 
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct ImportStar {}
 
-pub struct Colon {
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct Colon { }
 
-}
-
-pub struct Comma {
-
-}
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct Comma { }
 
 
-
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CompOp {
     LessThan ,
     GreaterThan ,
