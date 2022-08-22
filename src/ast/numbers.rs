@@ -48,26 +48,22 @@ pub(crate) fn parse_number(raw: &str) -> Expression {
     if INTEGER_RE.is_match(raw) {
         Expression::Integer(Box::new(Integer {
             value: raw,
-            lpar: Default::default(),
-            rpar: Default::default(),
+
         }))
     } else if FLOAT_RE.is_match(raw) {
         Expression::Float(Box::new(Float {
             value: raw,
-            lpar: Default::default(),
-            rpar: Default::default(),
+
         }))
     } else if IMAGINARY_RE.is_match(raw) {
         Expression::Imaginary(Box::new(Imaginary {
             value: raw,
-            lpar: Default::default(),
-            rpar: Default::default(),
+
         }))
     } else {
         Expression::Integer(Box::new(Integer {
             value: raw,
-            lpar: Default::default(),
-            rpar: Default::default(),
+
         }))
     }
 }
