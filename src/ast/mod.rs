@@ -31,7 +31,7 @@ pub use expression::{
 
 pub use op::{
         AugOp, AssignEqual, BinaryOp, BooleanOp, CompOp, UnaryOp, ImportStar,
-    Dot, Semicolon, Colon,
+    Semicolon, Colon,
     BitOr,
 
 };
@@ -51,6 +51,7 @@ pub use statement::{
     MatchAs,
     MatchOrElement,
     MatchOr,
+    Dot,
 };
 
 pub use crate::ast::error::ParserError;
