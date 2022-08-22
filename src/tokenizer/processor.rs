@@ -202,7 +202,7 @@ impl <'a> Processor<'a>  {
         return Processor::initialize(input, module_name);
     }
 
-    pub fn run(&mut self, skip_encoding: bool) -> Result<Vec<Token>, TokError> {
+    pub fn run(&'a mut self, skip_encoding: bool) -> Result<Vec<Token>, TokError> {
 
 
         let mut body: Vec<Token> = Vec::new();
