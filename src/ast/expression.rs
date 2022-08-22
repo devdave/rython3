@@ -1,17 +1,30 @@
 use std::{mem::swap, rc::Rc};
+
+use crate::tokenizer::Token;
+
 use super::op::{
-    UnaryOperation, BinaryOperation, BooleanOp,
+    UnaryOp, BinaryOp, BooleanOp, AssignEqual, CompOp,
 };
+
+use super::statement::Annotation;
+
+type TokenRef<'a> = Rc<Token<'a>>;
 
 // Atomic nodes
 
-pub struct Comma<'a> {
+pub struct Comma {
 
 }
 
 pub struct Name<'a> {
     pub value: &'a str,
 }
+
+pub enum NameOrAttribute<'a> {
+    N(Box<Name<'a>>),
+    A(Box<Attribute<'a>>),
+}
+
 
 pub struct Integer<'a> {
     //Because it can be 1234 and 1_234 it must be stored as a string
@@ -24,6 +37,24 @@ pub struct Float<'a> {
 
 pub struct Binary<'a> {
     pub value: &'a str,
+}
+
+pub struct BinaryOperation<'a> {
+    pub left: Box<Expression<'a>>,
+    pub operator: BinaryOp,
+    pub right: Box<Expression<'a>>,
+    pub lpar: Vec<LeftParen<'a>>,
+    pub rpar: Vec<RightParen<'a>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "py", derive(TryIntoPy))]
+pub struct BooleanOperation<'a> {
+    pub left: Box<Expression<'a>>,
+    pub operator: BooleanOp,
+    pub right: Box<Expression<'a>>,
+    pub lpar: Vec<LeftParen<'a>>,
+    pub rpar: Vec<RightParen<'a>>,
 }
 
 pub struct Hexidecimal<'a> {
@@ -43,7 +74,7 @@ pub struct Comparison<'a> {
 }
 
 pub struct ComparisonTarget<'a> {
-    pub operator: CompOp<'a>,
+    pub operator: CompOp,
     pub comparator: Expression<'a>,
 }
 
@@ -75,8 +106,8 @@ pub enum Expression<'a> {
     Hexidecimal(Box<Hexidecimal<'a>>),
     Imaginary(Box<Imaginary<'a>>),
     Comparison(Box<Comparison<'a>>),
-    UnaryOperation(Box<UnaryOperation>),
-    BinaryOperation(Box<BinaryOperation>),
+    UnaryOperation(Box<UnaryOperation<'a>>),
+    BinaryOperation(Box<BinaryOperation<'a>>),
     BooleanOperation(Box<BooleanOperation<'a>>),
     Attribute(Box<Attribute<'a>>),
     Tuple(Box<Tuple<'a>>),
@@ -101,6 +132,13 @@ pub enum Expression<'a> {
 
 }
 
+pub struct Arg<'a> {
+    pub value: Expression<'a>,
+    pub keyword: Option<Name<'a>>,
+    pub equal: Option<AssignEqual<'a>>,
+    pub comma: Option<Comma>,
+    pub star: &'a str,
+}
 
 
 pub struct Attribute<'a> {
@@ -127,13 +165,26 @@ pub struct CompFor<'a> {
     pub iter: Expression<'a>,
     pub ifs: Vec<CompIf<'a>>,
     pub inner_for_in: Option<Box<CompFor<'a>>>,
-    pub asynchronous: Option<Asynchronous<'a>>,
+    pub asynchronous: Option<Asynchronous>,
 }
 
 pub struct CompIf<'a> {
     pub test: Expression<'a>,
     pub(crate) if_tok: TokenRef<'a>,
 }
+
+// pub enum CompOp {
+//     LessThan,
+//     GreaterThan,
+//     LessThanEqual,
+//     GreaterThanEqual,
+//     Equal,
+//     NotEqual,
+//     In ,
+//     NotIn ,
+//     Is ,
+//     IsNot,
+// }
 
 pub enum AssignTargetExpression<'a> {
     Name(Box<Name<'a>>),
@@ -219,13 +270,14 @@ pub struct Lambda<'a> {
     pub body: Box<Expression<'a>>,
 }
 
+#[derive(Default, PartialEq, Debug)]
 pub struct Parameters<'a> {
     pub params: Vec<Param<'a>>,
     pub star_arg: Option<StarArg<'a>>,
     pub kwonly_params: Vec<Param<'a>>,
     pub star_kwarg: Option<Param<'a>>,
     pub posonly_params: Vec<Param<'a>>,
-    pub posonly_ind: Option<ParamSlash<'a>>,
+    pub posonly_ind: Option<ParamSlash>,
 }
 
 pub struct Param<'a> {
@@ -235,12 +287,14 @@ pub struct Param<'a> {
     pub default: Option<Expression<'a>>,
 }
 
-pub struct ParamSlash<'a> {
-    pub comma: Option<Comma<'a>>,
+pub struct ParamStar {}
+
+pub struct ParamSlash {
+    pub comma: Option<Comma>,
 }
 
 pub enum StarArg<'a> {
-    Star(Box<ParamStar<'a>>),
+    Star(Box<ParamStar>),
     Param(Box<Param<'a>>),
 }
 
@@ -259,6 +313,10 @@ pub struct From<'a> {
 
 pub struct Await<'a> {
     pub expression: Box<Expression<'a>>,
+}
+
+pub struct Asynchronous {
+
 }
 
 pub struct SimpleString<'a> {
@@ -307,3 +365,34 @@ pub struct NamedExpr<'a> {
     pub target: Box<Expression<'a>>,
     pub value: Box<Expression<'a>>,
 }
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct UnaryOperation<'a> {
+    pub operator: UnaryOp,
+    pub expression: Box<Expression<'a>>,
+}
+
+pub struct LeftSquareBracket<'a> {
+    pub(crate) tok: TokenRef<'a>,
+}
+
+pub struct RightSquareBracket<'a> {
+    pub(crate) tok: TokenRef<'a>,
+}
+
+pub struct LeftCurlyBrace<'a> {
+    pub(crate) tok: TokenRef<'a>,
+}
+
+pub struct RightCurlyBrace<'a> {
+    pub(crate) tok: TokenRef<'a>,
+}
+
+pub struct RightParen<'a> {
+    pub(crate) tok: TokenRef<'a>,
+}
+
+pub struct LeftParen<'a> {
+    pub(crate) tok: TokenRef<'a>,
+}
+

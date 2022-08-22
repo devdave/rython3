@@ -10,3 +10,4 @@ mod position;
 pub use token::Token;
 pub use processor::Processor;
 pub use ttype::TType;
+pub use error::TokError;

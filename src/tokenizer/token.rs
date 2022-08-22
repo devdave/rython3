@@ -8,27 +8,27 @@ pub struct Token<'a> {
     pub r#type: TType,
     pub start: Position,
     pub end: Position,
-    pub text: String,
+    pub text: &'a str,
 }
 
 #[allow(non_snake_case)]
 impl<'a> Token<'a>  {
 
-    pub(crate) fn Make(ttype: TType, start: Position, end: Position, content: &str) -> Self {
+    pub(crate) fn Make(ttype: TType, start: Position, end: Position, content: & 'a str) -> Self {
         Self {
             r#type: ttype,
             start: start,
             end: end,
-            text: content.to_string(),
+            text: content,
         }
     }
 
-    pub fn quick(ttype: TType, line_no:usize, start_col:usize, end_col:usize, content: &str) -> Self {
+    pub fn quick(ttype: TType, line_no:usize, start_col:usize, end_col:usize, content: & 'a str) -> Self {
         Self {
             r#type: ttype,
             start: Position::t((start_col, line_no)),
             end: Position::t((end_col, line_no)),
-            text: content.to_string(),
+            text: content,
         }
     }
 }

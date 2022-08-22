@@ -4,17 +4,17 @@ use unicode_segmentation::UnicodeSegmentation;
 // use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Clone)]
-pub struct ManagedLine {
+pub struct ManagedLine<'a>  {
     pub lineno: usize,
     pub idx: usize,
-    pub text: String,
+    pub text: &'a str,
     content: Vec<char>,
 }
 
 #[allow(non_snake_case)]
-impl ManagedLine {
+impl<'a> ManagedLine<'a>  {
 
-    pub fn Make(lineno: usize, input: String) -> Self {
+    pub fn Make(lineno: usize, input: &'a str) -> Self {
         let mut hack = Self {
             lineno,
             idx: 0,

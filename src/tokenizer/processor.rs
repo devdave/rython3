@@ -110,7 +110,7 @@ static NLSYM: &str = "\r\n";
 
 ///Lowest tier tokenizer, handles tokenizing line
 ///
-pub struct Processor {
+pub struct Processor<'a> {
     /**
         number of elements is how far indented the code is
         individual elements is the size of the identation.
@@ -136,14 +136,14 @@ pub struct Processor {
     string_start: Position,
     string_buffer_content: String,
 
-    pub module: ModuleLines,
+    pub module: ModuleLines<'a>,
 
 }
 
 
 #[allow(non_snake_case)]
-impl Processor {
-    pub fn initialize(lines: Vec<String>, module_name: Option<String>) -> Self {
+impl <'a> Processor<'a>  {
+    pub fn initialize(lines: Vec<&'a str>, module_name: Option<String>) -> Self {
 
         let name = module_name.unwrap_or("__main__".to_string());
         Self {
@@ -165,7 +165,7 @@ impl Processor {
         let mut buffer: String = String::new();
         let _file = File::open(fname).unwrap().read_to_string(&mut buffer);
 
-        let lines = buffer.split(&NLSYM).map(|l| format!("{}\n", l).to_string()).collect();
+        let lines = buffer.split(&NLSYM).map(|l| format!("{}\n", l).as_str()).collect();
 
         return Processor::initialize(lines, module_name);
 
@@ -191,14 +191,14 @@ impl Processor {
             input.split("\n")
         };
 
-        let content = product.map(|l| format!("{}\n", l).to_string()).collect();
+        let content = product.map(|l| format!("{}\n", l).as_str()).collect();
 
         info!("Processing string into Vector {:?}", content);
         return Processor::initialize(content, module_name);
 
     }
 
-    pub fn consume_vector(input: Vec<String>, module_name: Option<String>) -> Self {
+    pub fn consume_vector(input: Vec<&'a str>, module_name: Option<String>) -> Self {
         return Processor::initialize(input, module_name);
     }
 

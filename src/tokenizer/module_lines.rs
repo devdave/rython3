@@ -3,15 +3,15 @@
 use super::managed_line::ManagedLine;
 
 #[derive(Debug, Clone)]
-pub struct ModuleLines {
+pub struct ModuleLines<'a> {
     idx: usize,
     name: String,
-    content: Vec<ManagedLine>,
+    content: Vec<ManagedLine<'a>>,
 }
 
-impl ModuleLines {
+impl <'a> ModuleLines<'a> {
 
-    pub fn Make(lines: Vec<String>, name: String) -> Self {
+    pub fn Make(lines: Vec<&'a str>, name: String) -> Self {
 
         let managed: Vec<ManagedLine> = lines.iter().enumerate().map(|(lineno, content)| ManagedLine::Make(lineno,content.to_string())).collect();
         Self {
@@ -71,8 +71,8 @@ impl ModuleLines {
 
 }
 
-impl Iterator for ModuleLines {
-    type Item = (usize, ManagedLine);
+impl <'a> Iterator for ModuleLines<'a> {
+    type Item = (usize, ManagedLine<'a>);
 
     fn next(&mut self) -> Option<Self::Item> {
 
