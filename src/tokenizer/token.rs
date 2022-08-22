@@ -4,6 +4,7 @@ use crate::tokenizer::position::Position;
 use crate::tokenizer::ttype::TType;
 // use crate::tokenizer::position::Position;
 
+#[derive(Eq, Clone)]
 pub struct Token<'a> {
     pub r#type: TType,
     pub start: Position,

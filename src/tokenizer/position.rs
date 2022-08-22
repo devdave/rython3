@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Formatter};
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Eq, Clone)]
 pub struct Position {
     pub col: usize,
     pub line: usize,

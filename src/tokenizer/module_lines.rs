@@ -44,7 +44,7 @@ impl <'a> ModuleLines<'a> {
 
     }
 
-    pub fn get(&mut self) -> Option<ManagedLine> {
+    pub fn get(& 'a mut self) -> Option<ManagedLine<'a>> {
         if self.idx < self.content.len() {
             let retval = self.content.get(self.idx).unwrap();
             let duplicate = ManagedLine::Make(retval.lineno, retval.text);
@@ -74,7 +74,7 @@ impl <'a> ModuleLines<'a> {
 impl <'a> Iterator for ModuleLines<'a> {
     type Item = (usize, ManagedLine<'a>);
 
-    fn next(&mut self) -> Option<Self::Item> {
+    fn next(&mut self) -> Option<(usize, ManagedLine<'a>)> {
 
         if let Some(temp) = self.get(){
             return Some((self.idx, temp));
