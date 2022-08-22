@@ -99,13 +99,13 @@ mod test {
 
         #[test]
     fn managed_line_works() {
-        let mut line = ManagedLine::Make(1,"abc".to_string());
+        let mut line = ManagedLine::Make(1,"abc");
         assert_eq!(line.peek().unwrap(), 'a');
     }
 
     #[test]
     fn managed_line_gets_to_end() {
-        let mut line = ManagedLine::Make(1,"abc".to_string());
+        let mut line = ManagedLine::Make(1,"abc");
         assert_eq!(line.get().unwrap(), 'a');
         assert_eq!(line.get().unwrap(), 'b');
         assert_eq!(line.get().unwrap(), 'c');
@@ -114,7 +114,7 @@ mod test {
 
     #[test]
     fn managed_line_goes_back() {
-        let mut line = ManagedLine::Make(1,"abc".to_string());
+        let mut line = ManagedLine::Make(1,"abc");
         assert_eq!(line.get().unwrap(), 'a');
         assert_eq!(line.get().unwrap(), 'b');
         assert_eq!(line.get().unwrap(), 'c');
@@ -129,7 +129,7 @@ mod test {
     #[test]
     fn managed_line_swallows_operators() {
 
-        let mut sane = ManagedLine::Make(1,"()[]".to_string());
+        let mut sane = ManagedLine::Make(1,"()[]");
         //Somewhat problematic here is the regex is still Lazy<Regex> at this point
         // so for now primestart it
         let (_current_idx, retval1) = sane.test_and_return(&OPERATOR_RE.to_owned()).unwrap();
