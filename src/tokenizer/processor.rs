@@ -167,7 +167,7 @@ impl <'a> Processor<'a>  {
 
         buffer.replace(NLSYM, "\n");
 
-        let lines = buffer.split(&NLSYM).map(|l|format!("{}\n", l).as_str()).into_iter().collect();
+        let lines : Vec<&str> = buffer.split(&NLSYM).map(|l|format!("{}\n", l).as_str()).into_iter().collect();
 
         return Processor::initialize(lines, module_name);
 
