@@ -159,6 +159,22 @@ impl <'a> Processor<'a>  {
         }
     }
 
+    //string managers
+
+    fn continue_consuming_string(&mut self, flag: bool) {
+        self.string_continues = flag;
+    }
+
+    fn consuming_string(&self) -> bool {
+        return self.string_continues;
+    }
+
+    //misc helpers
+
+    fn has_more_lines(&self) -> bool {
+        return self.module.has_lines();
+    }
+
     pub fn consume_file<P>(fname: P, module_name: Option<String>) -> Self
         where P: AsRef<std::path::Path>, {
 
@@ -183,7 +199,8 @@ impl <'a> Processor<'a>  {
     pub fn tokenize_str(input: &str, module_name: Option<String> ) -> Result<Vec<Token>, TokError> {
 
         let mut engine = Processor::consume_string(input.to_string(), module_name);
-        return engine.run(true);
+        let retval = engine.run(true);
+        return retval;
     }
 
     pub fn consume_string(input: String, module_name: Option<String>) -> Self {
@@ -219,9 +236,7 @@ impl <'a> Processor<'a>  {
 
 
         debug!("Starting walk/iterate over module");
-        while self.module.has_lines() == true {
-
-
+        while self.has_more_lines() == true {
 
             let mut line = self.module.get().expect("Expected a line in module");
             debug!("Processing line: {:?}", line.text);
@@ -231,7 +246,7 @@ impl <'a> Processor<'a>  {
                 if self.string_type == StringType::TRIPLE {
                     if let Some(token) = self.process_triple_quote(&mut line) {
                         body.push(token);
-                        self.string_continues = false;
+                        self.continue_consuming_string(false);
                     }
                 }
 
@@ -375,7 +390,7 @@ impl <'a> Processor<'a>  {
             let index = line.get_idx();
 
             //We're continuing to consume a string, like a `'` or `"` but it could also be a `"""`
-            if self.string_continues == true {
+            if self.consuming_string() == true {
 
                 match self.string_type {
                     StringType::SINGLE => {
@@ -390,7 +405,8 @@ impl <'a> Processor<'a>  {
                                 )
                             );
 
-                            self.string_continues = false;
+                            self.continue_consuming_string(false);
+
                         } else {
                             return Err(TokError::UnterminatedString);
                         }
@@ -414,7 +430,7 @@ impl <'a> Processor<'a>  {
                             self.string_buffer_content.push_str(match_str);
                             product.push(Token::Make(
                                 TType::String,
-                                self.string_start,
+                                self.string_start.clone(),
                                 Position::t((current_idx, lineno)),
                                 self.string_buffer_content.as_str()
                             ));
@@ -440,8 +456,6 @@ impl <'a> Processor<'a>  {
                 );
             }
 
-
-
             else if let Some((current_idx, retval)) = line.test_and_return(&POINTFLOAT) {
                 debug!("Matched {} with pf1", retval);
                 product.push(
@@ -462,36 +476,7 @@ impl <'a> Processor<'a>  {
                     Token::quick(TType::Number, lineno, index, current_idx, retval)
                 );
             }
-            // //Hex number
-            // else if let Some((current_idx, retval)) = line.test_and_return(&HEXNUMBER) {
-            //     product.push(
-            //             Token::quick(TType::Number, lineno, index, current_idx, retval)
-            //         );
-            //     has_statement = true;
-            // }
-            // //Binary number
-            // else if let Some((current_idx, retval)) = line.test_and_return(&BINNUMBER) {
-            //     product.push(
-            //             Token::quick(TType::Number, lineno, index, current_idx, retval)
-            //         );
-            //     has_statement = true;
-            // }
-            // //Octal number
-            // else if let Some((current_idx, retval)) = line.test_and_return(&OCTNUMBER) {
-            //     product.push(
-            //             Token::quick(TType::Number, lineno, index, current_idx, retval)
-            //         );
-            //     has_statement = true;
-            // }
-            //
-            //
-            // //Declarative number (has _'s)
-            // else if let Some((current_idx, retval)) = line.test_and_return(&DECNUMBER) {
-            //     product.push(
-            //             Token::quick(TType::Number, lineno, index, current_idx, retval)
-            //         );
-            //     has_statement = true;
-            // }
+
             //Last ditch effort to catch numbers
             else if let Some((new_idx, retval)) = line.test_and_return(&NUMBER) {
                 product.push(
@@ -547,17 +532,7 @@ impl <'a> Processor<'a>  {
                 // self.string_continues = true;
                 let _ = line.get();
             }
-            // else if let Some((new_idx, retval)) = line.test_and_return(&STRINGS) {
-            //     product.push(
-            //         Token::quick(
-            //             TType::String,
-            //             lineno,
-            //             index,
-            //             new_idx,
-            //             retval
-            //         )
-            //     );
-            // }
+
 
             // Seek and then handle """ tokens
             else if let Some((current_idx, match_str)) = line.test_and_return(&TRIPLE_QUOTE.to_owned()) {
