@@ -1,13 +1,16 @@
 pub mod processor;
-mod token;
-mod ttype;
-mod error;
-mod operators;
+pub mod token;
+pub mod ttype;
+pub mod error;
+pub mod operators;
 mod managed_line;
 mod module_lines;
-mod position;
+pub mod position;
+pub mod patterns;
 
 pub use token::Token;
 pub use processor::Processor;
 pub use ttype::TType;
 pub use error::TokError;
+pub use position::Position;
+
