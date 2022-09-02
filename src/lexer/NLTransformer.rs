@@ -1,4 +1,4 @@
-use std::os::windows::fs::symlink_dir;
+
 use std::str::Chars;
 
 /**
@@ -13,7 +13,7 @@ struct Block2Lines {
 }
 
 impl Block2Lines {
-    fn new(input: String) -> Self {
+    pub fn new(input: String) -> Self {
         Self {
             body: input,
             pos: 0,
@@ -21,8 +21,9 @@ impl Block2Lines {
     }
 
 
-    fn transform(&mut self) -> Vec<String> {
-        let mut temp = String::new();
+    pub fn transform(&mut self) -> Vec<String> {
+
+        let mut temp = "".to_string();
         let mut product: Vec<String> = Vec::new();
         let mut iter: Chars = self.body.chars();
 
@@ -36,24 +37,24 @@ impl Block2Lines {
                         iter = tester;  // Skip ahead
                         temp.push('\n');
                         product.push(temp);
-                        temp = String::new();
+                        temp = "".to_string();
                     } else {
                         // Assume just \r on it's own
                         temp.push('\n');
                         product.push(temp);
-                        temp = String::new();
+                        temp = "".to_string();
                     }
                 } else {
                     // Reached EOF
                     temp.push('\n');
                     product.push(temp);
-                    temp = String::new();
+                    temp = "".to_string();
                 }
             } else if sym == '\n' {
                 // Catch correct line endings and split
                 temp.push(sym);
                 product.push(temp);
-                temp = String::new();
+                temp = "".to_string();
 
             } else {
                 // Catch whatever else is not \r or \n
@@ -66,7 +67,6 @@ impl Block2Lines {
         }
 
 
-
         return product;
 
     }
@@ -76,10 +76,17 @@ impl Block2Lines {
 }
 
 
-fn NLTransformer(raw: String) -> Vec<String> {
+pub fn NLTransformer<'a>(raw: &'a str) -> Vec<String> {
 
-    return Block2Lines::new(raw).transform();
+    return Block2Lines::new(raw.to_string()).transform();
+}
 
+pub fn Str2Vec(raw: &str) -> Vec<String> {
+    return Block2Lines::new(raw.to_string()).transform();
+}
+
+pub fn String2Vec(raw: String) -> Vec<String> {
+    return Block2Lines::new( raw).transform();
 }
 
 #[cfg(test)]
@@ -88,7 +95,7 @@ mod test {
 
     #[test]
     fn basic_test() {
-        let data = "Hello\nWorld\nTest!\n".to_string();
+        let data = "Hello\nWorld\nTest!\n";
         let actual = NLTransformer(data);
 
         assert_eq!(actual.len(), 3);
@@ -97,7 +104,7 @@ mod test {
 
     #[test]
     fn indepth_test() {
-        let data = "Hello\nWorld\nTest!\n".to_string();
+        let data = "Hello\nWorld\nTest!\n";
         let actual = NLTransformer(data);
 
         assert_eq!(actual.len(), 3);
@@ -109,7 +116,7 @@ mod test {
 
     #[test]
     fn mac_test() {
-        let data = "Hello\rWorld\r".to_string();
+        let data = "Hello\rWorld\r";
         let actual = NLTransformer(data);
 
         assert_eq!(actual.len(), 2);
