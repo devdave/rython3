@@ -269,8 +269,8 @@ pub struct Processor<'a> {
 //                         // of product so I can append them to body.
 //                         // TODO - Refactor so this is less stupid.
 //                         body.append(&mut product);
-//
-//                     },
+////                     },
+
 //                     Err(issue) => {
 //
 //                          return Err(issue.clone());
