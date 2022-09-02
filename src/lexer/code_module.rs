@@ -1,29 +1,21 @@
+
 use super::code_line::CodeLine;
 
-pub struct CodeModule {
-    lines: Vec<CodeLine>,
+#[derive(Clone)]
+pub struct CodeModule<'a> {
+    lines: Vec<CodeLine<'a>>,
     pos: usize,
 }
 
-impl CodeModule {
+impl <'a> CodeModule<'a> {
 
     pub fn new(input: Vec<String>) -> Self {
-        let mut codelines: Vec<CodeLine> = Vec::new();
 
-        for raw_line in input {
-            let codeline = CodeLine::new(raw_line);
-            codelines.push(codeline);
-        }
-
+        let temp = input.into_iter().map(|el| CodeLine::new(el.as_str())).collect();
         Self {
-            lines: codelines,
+            lines: temp,
             pos: 0,
         }
-    }
-
-    pub fn new_str(input: &Vec<&str>) -> Self {
-        let clean: Vec<String> = input.iter().map(|el| el.to_string()).collect();
-        return CodeModule::new(clean);
     }
 
     pub fn remaining(&self) -> usize {
@@ -36,17 +28,17 @@ impl CodeModule {
 
 }
 
-impl Iterator for CodeModule {
-    type Item = CodeLine;
+impl <'a> Iterator for CodeModule<'a> {
+    type Item = &'a CodeLine<'a>;
 
-    fn next(&mut self) -> Option<CodeLine> {
+    fn next(&mut self) -> Option<&'a CodeLine<'a>> {
         if self.pos >= self.lines.len() {
             None
         } else {
-            let retval = self.lines.get(self.pos).expect(format!("codeline@{}", self.pos).as_str());
+            let retval = self.lines.get(self.pos).expect(format!("codeline@{}", self.pos).as_str()).clone();
             self.pos += 1;
             //TODO this is one more spot that bleeds memory
-            return Some(retval.clone());
+            return Some(&retval);
         }
     }
 }
@@ -54,20 +46,23 @@ impl Iterator for CodeModule {
 #[cfg(test)]
 mod test {
     use crate::lexer::code_module::CodeModule;
+    use crate::lexer::NLTransformer::{Str2Vec, String2Vec};
+    use regex::Regex;
 
     #[test]
     fn basic() {
-        let data = vec!["Hello\n", "World\n", "Test\n", "Iterator\n", "Works\n"];
-        let module = CodeModule::new_str(&data);
+        let raw = Str2Vec("Hello\nWorld\nTest\nIterator\nWorks\n");
+
+        let module = CodeModule::new(raw);
         assert_eq!(5, module.len());
-        let mut test: Vec<String> = Vec::new();
-        for el in module {
-            test.push(el.get_line());
-        }
+        //TODO this could/is problematic that I cannot get the data back out!
+        // let mut test: Vec<&str> = module.map(|el| el.get_line()).collect();
+        // assert_eq!(test, data);
+    }
 
-        assert_eq!(test, data);
-
-
+    #[test]
+    fn mockup() {
+        let name_re = Regex::new(r"\A[a-zA-Z]{1}[\w\d]+").expect("regex");
 
 
     }
