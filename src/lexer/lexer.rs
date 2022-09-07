@@ -3,7 +3,7 @@ use std::io::Read;
 use std::vec::IntoIter;
 
 
-use super::code_module::CodeModule;
+// use super::code_module::CodeModule;
 use super::code_line::CodeLine;
 use super::NLTransformer::{ String2Vec, NLTransformer};
 use crate::tokenizer::{Token, TokError, Position, operators::OPERATOR_RE};
