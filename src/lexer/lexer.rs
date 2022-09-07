@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::Read;
-
+use std::vec::IntoIter;
 
 
 use super::code_module::CodeModule;
@@ -24,7 +24,7 @@ use super::state::LexerState;
 
 
 struct Lexer<'a> {
-    module: CodeModule<'a>,
+    lines: Vec<CodeLine<'a>>,
 
 
 }
@@ -37,17 +37,21 @@ impl <'a> Lexer<'a> {
         let mut buffer = String::new();
         File::open(fname).expect("Failed to open file").read_to_string(&mut buffer);
 
-        let lines: Vec<String> = String2Vec(buffer);
+        let temp_lines: Vec<String> = String2Vec(buffer);
+        let mut lines: Vec<CodeLine> = Vec::new();
+
+        for line in temp_lines {
+            lines.push(CodeLine::new2(line));
+        }
 
         Self {
-            module: CodeModule::new(lines),
-            string_body: "".to_string(),
+            lines: lines,
         }
 
 
     }
 
-    pub fn process(&mut self, skip_encoding:bool) -> Result<Vec<Token>,TokError> {
+    pub fn process(mut self, skip_encoding:bool) -> Result<Vec<Token<'a>>,TokError> {
 
         let mut product: Vec<Token> = Vec::new();
 
@@ -56,9 +60,11 @@ impl <'a> Lexer<'a> {
             product.push(Token::quick(TType::Encoding, 0, 0, 0, "utf-8"));
         }
 
+        let state = LexerState::new();
 
-        for mut line in self.module {
-            match self.process_line(&mut line) {
+
+        for (lineno, mut line) in self.lines.iter_mut().enumerate() {
+            match line.process(lineno, &state) {
                 Ok(mut tokens) => product.append(&mut tokens),
                 Err(issue) => return Err(issue),
             }
@@ -69,11 +75,10 @@ impl <'a> Lexer<'a> {
 
         return Ok(product);
     }
-
-    fn process_line(& mut self, line: &mut CodeLine) -> Result<Vec<Token>,TokError> {
+/*
+    fn process_line(& mut self, line: &mut CodeLine, lineno: usize) -> Result<Vec<Token>,TokError> {
         let mut product: Vec<Token> = Vec::new();
         let mut is_statement: bool = false;
-        let mut lineno = 0;
 
         loop {
 
@@ -140,6 +145,7 @@ impl <'a> Lexer<'a> {
         return Ok(product);
 
     }
+    */
 
 }
 
