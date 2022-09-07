@@ -26,9 +26,6 @@ use super::state::LexerState;
 struct Lexer<'a> {
     module: CodeModule<'a>,
 
-    string_continues: bool,
-    string_type: StringType,
-    string_body: String,
 
 }
 
@@ -44,8 +41,6 @@ impl <'a> Lexer<'a> {
 
         Self {
             module: CodeModule::new(lines),
-            string_continues: false,
-            string_type: StringType::NONE,
             string_body: "".to_string(),
         }
 
