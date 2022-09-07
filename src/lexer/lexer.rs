@@ -15,13 +15,13 @@ use crate::tokenizer::patterns::{
 
 };
 
-enum StringType {
-    NONE,
-    AposTriple,
-    QuoteTriple,
-    APOS,
-    QUOTE,
-}
+use super::state::LexerState;
+
+
+
+
+
+
 
 struct Lexer<'a> {
     module: CodeModule<'a>,
