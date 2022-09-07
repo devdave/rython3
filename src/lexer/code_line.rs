@@ -3,6 +3,11 @@ use std::string::String;
 use unicode_segmentation;
 use unicode_segmentation::UnicodeSegmentation;
 
+use super::state::LexerState;
+
+use crate::tokenizer::Token;
+use crate::tokenizer::TokError;
+
 
 #[derive(Clone, Copy)]
 pub struct CodeLine<'a> {
@@ -16,6 +21,13 @@ impl <'a> CodeLine<'a> {
         Self {
             len: input.len(),
             line: input,
+            pos: 0,
+        }
+    }
+    pub fn new2(input: String) -> Self {
+        Self {
+            len: input.len(),
+            line: input.as_str(),
             pos: 0,
         }
     }
@@ -55,6 +67,15 @@ impl <'a> CodeLine<'a> {
         let retval = self.line.graphemes(true).nth(self.pos);
         self.pos = self.pos + 1;
         return retval;
+    }
+
+    pub fn process(&mut self, lineno: usize, state: &LexerState) -> Result< Vec<Token>, TokError> {
+        let product: Vec<Token> = Vec::new();
+
+
+
+
+        return Ok(product);
     }
 }
 
