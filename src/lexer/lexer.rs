@@ -27,7 +27,7 @@ struct Lexer<'a> {
 
 impl <'a> Lexer<'a> {
 
-    pub fn lex_file<P>(fname:P) -> Result<Vec<Token<'a>>, TokError>
+    pub fn lex_file<P>(fname:P) -> Vec<String>
     where P: AsRef<std::path::Path>,
     {
         let mut buffer = String::new();
@@ -36,9 +36,19 @@ impl <'a> Lexer<'a> {
         let temp_lines: Vec<String> = String2Vec(buffer);
         let mut lines: Vec<CodeLine> = Vec::new();
 
-        let lines = temp_lines.iter().map(|el| CodeLine::new(el.as_str())).collect();
+        return temp_lines;
 
-        return Lexer::process(lines, true);
+        // let lines = temp_lines.iter().map(|el| CodeLine::new(el.as_str())).collect();
+
+        // return Lexer::process(lines, true);
+    }
+
+    pub fn TokenizeFile<P>(fname:P) -> Result<Vec<Token<'a>>,TokError>
+    where P: AsRef<std::path::Path>
+    {
+        let lines = Lexer::lex_file(fname);
+        let codes = lines.iter().map(|el| CodeLine::new(el.as_str())).collect();
+        return Lexer::process(codes, true);
     }
 
     pub fn process(mut lines: Vec<CodeLine<'a>>, skip_encoding:bool) -> Result<Vec<Token<'a>>,TokError> {
@@ -144,7 +154,7 @@ mod test {
 
     #[test]
     fn test_float() {
-        let mut tokens = Lexer::lex_file("test_fixtures/test_float.py").expect("lexer");
+        let mut tokens = Lexer::TokenizeFile("test_fixtures/test_float.py").expect("tokens");
         println!("I got {} tokens", tokens.len());
     }
 }
