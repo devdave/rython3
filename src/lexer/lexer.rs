@@ -60,11 +60,11 @@ impl <'a> Lexer<'a> {
             product.push(Token::quick(TType::Encoding, 0, 0, 0, "utf-8"));
         }
 
-        let state = LexerState::new();
+        let mut state = LexerState::new();
 
 
         for (lineno, mut line) in self.lines.iter_mut().enumerate() {
-            match line.process(lineno, &state) {
+            match tokenize_line(line, lineno, &mut state) {
                 Ok(mut tokens) => product.append(&mut tokens),
                 Err(issue) => return Err(issue),
             }
@@ -75,8 +75,12 @@ impl <'a> Lexer<'a> {
 
         return Ok(product);
     }
-/*
-    fn process_line(& mut self, line: &mut CodeLine, lineno: usize) -> Result<Vec<Token>,TokError> {
+
+
+}
+
+fn tokenize_line<'a>(line: &mut CodeLine, lineno: usize, state: &mut LexerState) -> Result<Vec<Token<'a>>,TokError> {
+
         let mut product: Vec<Token> = Vec::new();
         let mut is_statement: bool = false;
 
@@ -93,19 +97,19 @@ impl <'a> Lexer<'a> {
             //Consume Comments
             if let Some((new_idx, retstr)) = line.return_match(COMMENT.to_owned()) {
                 product.push(
-                    Token::quick(TType::Comment, lineno, index, new_idx, retstr.as_str())
+                    Token::quick_string(TType::Comment, lineno, index, new_idx, retstr)
                 );
             }
             //Consume floats
             else if let Some((new_idx, retstr)) = line.return_match(FLOATING_POINT.to_owned()) {
                 product.push(
-                    Token::quick(TType::Number, lineno, index, new_idx, retstr.as_str())
+                    Token::quick_string(TType::Number, lineno, index, new_idx, retstr)
                 )
             }
             //Consume operators
             else if let Some((new_idx, retstr)) = line.return_match(OPERATOR_RE.to_owned()) {
                 product.push(
-                Token::quick(TType::Op, lineno, index, new_idx, retstr.as_str())
+                Token::quick_string(TType::Op, lineno, index, new_idx, retstr)
                 );
                 is_statement = true;
             }
@@ -113,7 +117,7 @@ impl <'a> Lexer<'a> {
             else if let Some((new_idx, retstr)) = line.return_match(NAME_RE.to_owned()) {
                 //TODO look for parents and brackets
                 product.push(
-                    Token::quick(TType::Name, lineno, index, new_idx, retstr.as_str())
+                    Token::quick_string(TType::Name, lineno, index, new_idx, retstr)
                 );
 
                 is_statement = true;
@@ -135,7 +139,7 @@ impl <'a> Lexer<'a> {
                         return Err(TokError::BadCharacter(chr.chars().nth(0).unwrap()));
                     }
                 } else {
-                    panic!("Reached end of line but there is no ending char!")
+                    panic!("Reached end of line but there is no required new line!")
                 }
             }
 
@@ -145,9 +149,6 @@ impl <'a> Lexer<'a> {
         return Ok(product);
 
     }
-    */
-
-}
 
 #[cfg(test)]
 mod test {
