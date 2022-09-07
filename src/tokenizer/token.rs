@@ -1,5 +1,6 @@
 
 use std::fmt::{Debug, Display, Formatter};
+use std::io::empty;
 use crate::tokenizer::position::Position;
 use crate::tokenizer::ttype::TType;
 // use crate::tokenizer::position::Position;
@@ -24,13 +25,20 @@ impl<'a> Token<'a>  {
         }
     }
 
-    pub fn quick(ttype: TType, line_no:usize, start_col:usize, end_col:usize, content: & 'a str) -> Self {
+    pub fn quick(ttype: TType, line_no:usize, start_col:usize, end_col:usize, tag_text: & 'a str) -> Self {
         Self {
             r#type: ttype,
             start: Position::t((start_col, line_no)),
             end: Position::t((end_col, line_no)),
-            text: content,
+            text: tag_text,
         }
+    }
+
+    pub fn quick_string(r#type: TType, line_no: usize, start_col: usize, end_col: usize, tag: String) -> Self {
+        let mut temp = Self::quick(r#type, line_no, start_col, end_col, "");
+        //attempt to get around E0515
+        temp.text = &tag.as_str();
+        return temp;
     }
 }
 
