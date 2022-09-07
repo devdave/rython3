@@ -19,19 +19,15 @@ use super::state::LexerState;
 
 
 
-
-
-
-
 struct Lexer<'a> {
-    lines: Vec<CodeLine<'a>>,
+    tokens: Vec<Token<'a>>,
 
 
 }
 
 impl <'a> Lexer<'a> {
 
-    pub fn lex_file<P>(fname:P) -> Self
+    pub fn lex_file<P>(fname:P) -> Result<Vec<Token<'a>>, TokError>
     where P: AsRef<std::path::Path>,
     {
         let mut buffer = String::new();
@@ -40,21 +36,14 @@ impl <'a> Lexer<'a> {
         let temp_lines: Vec<String> = String2Vec(buffer);
         let mut lines: Vec<CodeLine> = Vec::new();
 
-        for line in temp_lines {
-            lines.push(CodeLine::new2(line));
-        }
+        let lines = temp_lines.iter().map(|el| CodeLine::new(el.as_str())).collect();
 
-        Self {
-            lines: lines,
-        }
-
-
+        return Lexer::process(lines, true);
     }
 
-    pub fn process(mut self, skip_encoding:bool) -> Result<Vec<Token<'a>>,TokError> {
+    pub fn process(mut lines: Vec<CodeLine<'a>>, skip_encoding:bool) -> Result<Vec<Token<'a>>,TokError> {
 
         let mut product: Vec<Token> = Vec::new();
-
 
         if skip_encoding == false {
             product.push(Token::quick(TType::Encoding, 0, 0, 0, "utf-8"));
@@ -62,8 +51,7 @@ impl <'a> Lexer<'a> {
 
         let mut state = LexerState::new();
 
-
-        for (lineno, mut line) in self.lines.iter_mut().enumerate() {
+        for (lineno, mut line) in lines.iter_mut().enumerate() {
             match tokenize_line(line, lineno, &mut state) {
                 Ok(mut tokens) => product.append(&mut tokens),
                 Err(issue) => return Err(issue),
@@ -97,7 +85,7 @@ fn tokenize_line<'a>(line: &mut CodeLine<'a>, lineno: usize, state: &mut LexerSt
             //Consume Comments
             if let Some((new_idx, retstr)) = line.return_match(COMMENT.to_owned()) {
                 product.push(
-                    Token::quick(TType::Comment, lineno, index, new_idx, retstr.as_str())
+                    Token::quick(TType::Comment, lineno, index, new_idx, retstr)
                 );
             }
             //Consume floats
@@ -156,7 +144,7 @@ mod test {
 
     #[test]
     fn test_float() {
-        let mut lexer = Lexer::lex_file("test_fixtures/test_float.py");
-        let tokens = lexer.process(true);
+        let mut tokens = Lexer::lex_file("test_fixtures/test_float.py").expect("lexer");
+        println!("I got {} tokens", tokens.len());
     }
 }
