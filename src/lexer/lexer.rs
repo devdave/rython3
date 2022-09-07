@@ -79,7 +79,7 @@ impl <'a> Lexer<'a> {
 
 }
 
-fn tokenize_line<'a>(line: &mut CodeLine, lineno: usize, state: &mut LexerState) -> Result<Vec<Token<'a>>,TokError> {
+fn tokenize_line<'a>(line: &mut CodeLine<'a>, lineno: usize, state: &mut LexerState) -> Result<Vec<Token<'a>>,TokError> {
 
         let mut product: Vec<Token> = Vec::new();
         let mut is_statement: bool = false;
@@ -97,31 +97,31 @@ fn tokenize_line<'a>(line: &mut CodeLine, lineno: usize, state: &mut LexerState)
             //Consume Comments
             if let Some((new_idx, retstr)) = line.return_match(COMMENT.to_owned()) {
                 product.push(
-                    Token::quick_string(TType::Comment, lineno, index, new_idx, retstr)
+                    Token::quick(TType::Comment, lineno, index, new_idx, retstr.as_str())
                 );
             }
             //Consume floats
-            else if let Some((new_idx, retstr)) = line.return_match(FLOATING_POINT.to_owned()) {
-                product.push(
-                    Token::quick_string(TType::Number, lineno, index, new_idx, retstr)
-                )
-            }
-            //Consume operators
-            else if let Some((new_idx, retstr)) = line.return_match(OPERATOR_RE.to_owned()) {
-                product.push(
-                Token::quick_string(TType::Op, lineno, index, new_idx, retstr)
-                );
-                is_statement = true;
-            }
-            //Scan for name tokens
-            else if let Some((new_idx, retstr)) = line.return_match(NAME_RE.to_owned()) {
-                //TODO look for parents and brackets
-                product.push(
-                    Token::quick_string(TType::Name, lineno, index, new_idx, retstr)
-                );
-
-                is_statement = true;
-            }
+            // else if let Some((new_idx, retstr)) = line.return_match(FLOATING_POINT.to_owned()) {
+            //     product.push(
+            //         Token::quick_string(TType::Number, lineno, index, new_idx, retstr)
+            //     )
+            // }
+            // //Consume operators
+            // else if let Some((new_idx, retstr)) = line.return_match(OPERATOR_RE.to_owned()) {
+            //     product.push(
+            //     Token::quick_string(TType::Op, lineno, index, new_idx, retstr)
+            //     );
+            //     is_statement = true;
+            // }
+            // //Scan for name tokens
+            // else if let Some((new_idx, retstr)) = line.return_match(NAME_RE.to_owned()) {
+            //     //TODO look for parents and brackets
+            //     product.push(
+            //         Token::quick_string(TType::Name, lineno, index, new_idx, retstr)
+            //     );
+            //
+            //     is_statement = true;
+            // }
             else {
                 if let Some(chr) = line.get() {
                     if chr == "\n" {

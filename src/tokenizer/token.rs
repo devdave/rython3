@@ -34,12 +34,13 @@ impl<'a> Token<'a>  {
         }
     }
 
-    pub fn quick_string(r#type: TType, line_no: usize, start_col: usize, end_col: usize, tag: String) -> Self {
-        let mut temp = Self::quick(r#type, line_no, start_col, end_col, "");
-        //attempt to get around E0515
-        temp.text = &tag.as_str();
-        return temp;
-    }
+    // pub fn quick_string(r#type: TType, line_no: usize, start_col: usize, end_col: usize, tag: String) -> Self {
+    //
+    //     //failed attempt to get around E0515
+    //     let temp = tag.clone().as_str();
+    //     Self::quick(r#type, line_no, start_col, end_col, temp)
+    //
+    // }
 }
 
 impl<'a>  Debug for Token<'a>  {
