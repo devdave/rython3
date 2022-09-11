@@ -1,4 +1,5 @@
 use std::fs::File;
+
 use std::io::Read;
 use std::vec::IntoIter;
 
@@ -20,12 +21,29 @@ use super::state::LexerState;
 
 
 struct Lexer<'a> {
-    tokens: Vec<Token<'a>>,
+    lines: Vec<String>,
+    codes: Vec<CodeLine<'a>>,
+    pub tokens: Vec<Token<'a>>,
+
+    pub was_error: bool,
+    pub issue: Option<TokError>,
 
 
 }
 
 impl <'a> Lexer<'a> {
+
+    fn new() -> Self {
+        Self {
+            lines: Vec::new(),
+            codes: Vec::new(),
+            tokens: Vec::new(),
+
+            was_error: false,
+            issue: None,
+        }
+    }
+
 
     pub fn lex_file<P>(fname:P) -> Vec<String>
     where P: AsRef<std::path::Path>,
@@ -34,24 +52,37 @@ impl <'a> Lexer<'a> {
         File::open(fname).expect("Failed to open file").read_to_string(&mut buffer);
 
         let temp_lines: Vec<String> = String2Vec(buffer);
-        let mut lines: Vec<CodeLine> = Vec::new();
 
         return temp_lines;
 
-        // let lines = temp_lines.iter().map(|el| CodeLine::new(el.as_str())).collect();
 
-        // return Lexer::process(lines, true);
     }
 
-    pub fn TokenizeFile<P>(fname:P) -> Result<Vec<Token<'a>>,TokError>
+    pub fn TokenizeFile<P>(&'a mut self, fname:P) -> bool
     where P: AsRef<std::path::Path>
     {
-        let lines = Lexer::lex_file(fname);
-        let codes = lines.iter().map(|el| CodeLine::new(el.as_str())).collect();
-        return Lexer::process(codes, true);
+
+        self.lines = Lexer::lex_file(fname);
+        for line in self.lines.iter() {
+            self.codes.push(CodeLine::new(line.as_str()));
+        }
+        let result = Lexer::process(&mut self.codes, true);
+        self.was_error = match result  {
+            Ok(tokens) => {
+                self.tokens = tokens;
+                false
+            },
+            Err(issue) => {
+                self.issue = Some(issue);
+                true
+            }
+        };
+
+        return self.was_error;
+
     }
 
-    pub fn process(mut lines: Vec<CodeLine<'a>>, skip_encoding:bool) -> Result<Vec<Token<'a>>,TokError> {
+    pub fn process(mut lines: &mut Vec<CodeLine<'a>>, skip_encoding:bool) -> Result<Vec<Token<'a>>,TokError> {
 
         let mut product: Vec<Token> = Vec::new();
 
@@ -95,7 +126,7 @@ fn tokenize_line<'a>(line: &mut CodeLine<'a>, lineno: usize, state: &mut LexerSt
             //Consume Comments
             if let Some((new_idx, retstr)) = line.return_match(COMMENT.to_owned()) {
                 product.push(
-                    Token::quick(TType::Comment, lineno, index, new_idx, retstr)
+                    Token::quick(TType::Comment, lineno, index, new_idx, &retstr)
                 );
             }
             //Consume floats
@@ -154,7 +185,9 @@ mod test {
 
     #[test]
     fn test_float() {
-        let mut tokens = Lexer::TokenizeFile("test_fixtures/test_float.py").expect("tokens");
-        println!("I got {} tokens", tokens.len());
+        let mut lexer = Lexer::new();
+        let mut status = lexer.TokenizeFile("test_fixtures/test_float.py");
+        assert_eq!(lexer.was_error, true);
+        println!("I got {} tokens", lexer.tokens.len());
     }
 }

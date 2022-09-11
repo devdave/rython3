@@ -24,22 +24,22 @@ impl <'a> CodeLine<'a> {
             pos: 0,
         }
     }
-    pub fn new2(input: String) -> Self {
-        Self {
-            len: input.len(),
-            line: input.as_str(),
-            pos: 0,
-        }
-    }
+    // pub fn new2(input: String) -> Self {
+    //     Self {
+    //         len: input.len(),
+    //         line: input.as_str(),
+    //         pos: 0,
+    //     }
+    // }
 
-    pub fn return_match(&mut self, pattern: Regex) -> Option<(usize, &'a str)> {
+    pub fn return_match(&mut self, pattern: Regex) -> Option<(usize, String)> {
         //Return the new cursor position
 
         //TODO is there a faster/more efficient way to do this?
         let mut remaining: String = self.line.graphemes(true).skip(self.pos).collect();
 
         if let Some(result) = pattern.find(remaining.as_str()) {
-           let retstr = result.as_str();
+           let retstr = result.as_str().to_string();
             self.pos += retstr.len();
             return Some((self.pos, retstr));
         }
@@ -115,7 +115,7 @@ mod test {
         let outcome = line.return_match(re);
         assert!(outcome != None);
 
-        assert_eq!(outcome, Some((5 as usize, "12345")));
+        assert_eq!(outcome, Some((5 as usize, "12345".to_string())));
 
         assert_eq!(line.peek(), Some("a"));
         assert_eq!(line.get(), Some("a"));
